@@ -93,17 +93,17 @@ rd     = (I >> 7) & 0x1f
 0e sw
 0f sd
 10 mov
-11 
-12 
-13 
-14        
-15 
-16 
-17 
-18 
-19 
-1a 
-1b 
+11 mfhi
+12 mthi
+13 mflo
+14 mtlo   
+15 slt
+16 sltu
+17 slti
+18 sltiu
+19 eq             $d = ($s == $t)
+1a eqi            $d = ($s == #imm)
+1b eqiu           
 1c 
 1d 
 1e 
@@ -114,14 +114,30 @@ rd     = (I >> 7) & 0x1f
 23 andi
 24 xor   
 25 xori
-26 
-27 
-28 
-29 
-2a 
-2b 
-2c 
-2d 
-2e 
-2f 
-30 
+26 not
+27 nor
+28 shl
+29 shli
+2a shr
+2b shri
+2c add
+2d addi
+2e addiu
+2f sub
+30 subu
+31 mul
+32 mulu
+33 div
+34 divu
+35 
+36 
+37 
+38 
+39 
+3a 
+3b 
+3c 
+3d 
+3e 
+3f 
+40 

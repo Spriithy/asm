@@ -16,10 +16,10 @@ int main(void)
     emu.code = malloc(1024);
 
     gen(LUI(2, 0xAABB));
-    gen(ORI(2, 0xCCDD));
+    gen(ORI(2, 2, 0xCCDD));
     gen(SB(2, 1, 2));
     gen(LBU(5, 1, 2));
-    gen(MOV(1, 0));
+    gen(INT(0, 1));
     gen(INT(0, 0));
 
     exec();
