@@ -1,5 +1,5 @@
-#ifndef EMU32_H
-#define EMU32_H
+#ifndef EMU64_H
+#define EMU64_H
 
 #include <stdint.h>
 
@@ -25,4 +25,4 @@ typedef struct {
 
 void exec(void);
 
-#endif /* emu.h */
+#endif // emu.h

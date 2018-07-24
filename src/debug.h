@@ -1,6 +1,6 @@
-#ifndef EMU32_DEBUG_H
-#define EMU32_DEBUG_H
+#ifndef EMU64_DEBUG_H
+#define EMU64_DEBUG_H
 
 void breakpoint();
 
-#endif /* debug.h */
+#endif // debug.h

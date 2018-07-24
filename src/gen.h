@@ -1,5 +1,5 @@
-#ifndef EMU32_GEN_H
-#define EMU32_GEN_H
+#ifndef EMU64_GEN_H
+#define EMU64_GEN_H
 
 #include <stdint.h>
 
@@ -36,4 +36,4 @@
 #define OR(rd, rs1, rs2) RR(0x20, rd, rs1, rs2, 0)
 #define ORI(rd, imm16) RI16(0x21, rd, imm16)
 
-#endif /* end.h */
+#endif // end.h
