@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-emulator_t emu;
+#define R emu.reg
 
-#define sext(imm, n) ((imm ^ (1U << (n - 1)) - (1U << (n - 1))))
+emulator_t emu;
 
 static void swi(uint32_t icode)
 {

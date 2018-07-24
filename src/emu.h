@@ -5,7 +5,7 @@
 
 #define Mb (1024 * 1024)
 
-#define R emu.reg
+#define sext(imm, n) ((imm ^ (1U << (n - 1)) - (1U << (n - 1))))
 
 #define OP (int)(*emu.ip & 0xff)
 #define RD (int)((*emu.ip >> 8) & 0x1f)
