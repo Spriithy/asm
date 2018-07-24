@@ -14,7 +14,6 @@ static void swi(uint32_t icode)
         free(emu.code);
         exit(R[1]);
     case 0x01: /* reg dump */
-        return;
         for (int i = 0; i < 32; i++) {
             printf("r%-2d   0x%llX   (%llu)\n", i, R[i], R[i]);
         }
