@@ -130,14 +130,14 @@ rd     = (I >> 7) & 0x1f
 33 div
 34 divu
 35 
-36 
-37 
-38 push
+36 pushw
+37 push
+38 popw
 39 pop
-3a 
-3b 
-3c jal
-3d jalr
+3a call
+3b callr
+3c j
+3d jr
 3e je
 3f jne
 40 

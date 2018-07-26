@@ -71,14 +71,14 @@ void nop()
     rr(0, 0, 0, 0, 0);
 }
 
-void int_(uint32_t rd, int16_t icode)
+void int_(int16_t icode)
 {
-    ri16(0x01, rd, 0, icode);
+    ri16(0x01, 0, 0, icode);
 }
 
-void intr(uint32_t rd, uint32_t rs1)
+void intr(uint32_t rs1)
 {
-    rr(0x02, rd, rs1, 0, 0);
+    rr(0x02, 0, rs1, 0, 0);
 }
 
 void set_breakpoint()
@@ -311,12 +311,42 @@ void divu(uint32_t rd, uint32_t rs1, uint32_t rs2)
     rr(0x34, rd, rs1, rs2, 0);
 }
 
-void jal(char* label)
+void pushw(uint32_t rs1)
+{
+    rr(0x36, 0, rs1, 0, 0);
+}
+
+void push(uint32_t rs1)
+{
+    rr(0x37, 0, rs1, 0, 0);
+}
+
+void popw(uint32_t rd)
+{
+    rr(0x38, rd, 0, 0, 0);
+}
+
+void pop(uint32_t rd)
+{
+    rr(0x39, rd, 0, 0, 0);
+}
+
+void call(char* label)
+{
+    jmp(0x3a, 0, 0, label);
+}
+
+void callr(char* label)
+{
+    jmp(0x3b, 0, 0, label);
+}
+
+void j(char* label)
 {
     jmp(0x3c, 0, 0, label);
 }
 
-void jalr(uint32_t rs1, char* label)
+void jr(uint32_t rs1, char* label)
 {
     jmp(0x3d, rs1, 0, label);
 }
@@ -343,16 +373,17 @@ uint32_t* gen()
             vector_iter(label_t, label, asmgen.labels)
             {
                 if (strcmp(ir->label, label->name) == 0) {
-                    printf("0x%X\n", I24(ir->op, ir->addr));
                     code[addr++] = I24(ir->op, ir->addr);
                     break;
                 }
             }
         } else {
-            printf("0x%X\n", ir->instr);
             code[addr++] = ir->instr;
         }
     }
+
+    vector_free(asmgen.code);
+    vector_free(asmgen.labels);
 
     return code;
 }

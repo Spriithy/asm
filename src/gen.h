@@ -7,8 +7,8 @@ uint32_t* gen();
 
 void label(char* name);
 void nop();
-void int_(uint32_t rd, int16_t icode);
-void intr(uint32_t rd, uint32_t rs1);
+void int_(int16_t icode);
+void intr(uint32_t rs1);
 void set_breakpoint();
 void lb(uint32_t rd, uint32_t rs1, int off);
 void lbu(uint32_t rd, uint32_t rs1, int off);
@@ -55,8 +55,14 @@ void mul(uint32_t rd, uint32_t rs1, uint32_t rs2);
 void mulu(uint32_t rd, uint32_t rs1, uint32_t rs2);
 void div_(uint32_t rd, uint32_t rs1, uint32_t rs2);
 void divu(uint32_t rd, uint32_t rs1, uint32_t rs2);
-void jal(char* label);
-void jalr(uint32_t rs1, char* label);
+void pushw(uint32_t rs1);
+void push(uint32_t rs1);
+void popw(uint32_t rd);
+void pop(uint32_t rd);
+void call(char* label);
+void callr(char* label);
+void j(char* label);
+void jr(uint32_t rs1, char* label);
 void je(uint32_t rs1, uint32_t rs2, char* label);
 void jne(uint32_t rs1, uint32_t rs2, char* label);
 

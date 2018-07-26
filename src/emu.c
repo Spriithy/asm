@@ -4,6 +4,24 @@
 #include <stdlib.h>
 
 #define R emu.reg
+#define GP R[28]
+#define SP R[29]
+#define FP R[30]
+#define RA R[31]
+
+#define PUSH(X) *(uint64_t*)(SP -= 8) = (X);
+#define PUSHW(X) *(uint32_t*)(SP -= 4) = (X);
+
+#define POP(RD)                 \
+    {                           \
+        R[RD] = *(uint64_t*)SP; \
+        SP += 8;                \
+    }
+#define POPW(RD)                \
+    {                           \
+        R[RD] = *(uint32_t*)SP; \
+        SP += 4;                \
+    }
 
 #define setip(offs) emu.ip = emu.code + offs;
 
@@ -14,11 +32,14 @@ static void swi(uint32_t icode)
     switch (icode) {
     case 0x00: /* exit */
         free(emu.code);
-        exit(R[1]);
+        exit(R[5]);
     case 0x01: /* reg dump */
         for (int i = 0; i < 32; i++) {
             printf("r%-2d   0x%llX   (%llu)\n", i, R[i], R[i]);
         }
+        break;
+    case 5:
+        printf("%c", (int)R[5]);
         break;
     }
 }
@@ -80,12 +101,14 @@ void exec()
 {
     uint64_t addr;
     emu.cycles = 0;
-    emu.debug = 1;
+    // emu.debug = 1;
     emu.ip = emu.code;
-    R[1] = (uint64_t)emu.mem;
+    SP = (uint64_t)emu.mem;
 
 cpu_loop:
-    printf("%p 0x%-10x ", emu.ip, *emu.ip);
+    if (emu.debug)
+        printf("%p 0x%-10x ", emu.ip, *emu.ip);
+
     switch (OP) {
     case 0x00: /* nop */
         if (emu.debug)
@@ -445,18 +468,57 @@ cpu_loop:
         emu.lo = R[RS1] / R[RS2];
         break;
 
-    case 0x3c: /* jal label */
+    case 0x36: /* pushw $rd */
         if (emu.debug)
-            printf("jal   0x%X\n", I24_imm);
+            printf("pushw $r%d\n", RS1);
+        PUSHW(R[RS1]);
+        break;
+
+    case 0x37: /* push $rs1 */
+        if (emu.debug)
+            printf("push  $r%d\n", RS1);
+        PUSH(R[RS1]);
+        break;
+
+    case 0x38: /* popw $rd */
+        if (emu.debug)
+            printf("popw  $r%d\n", RD);
+        POPW(RD);
+        break;
+
+    case 0x39: /* pop $rd */
+        if (emu.debug)
+            printf("pop   $r%d\n", RD);
+        POP(RD);
+        break;
+
+    case 0x3c: /* j label */
+        if (emu.debug)
+            printf("j     0x%X\n", I24_imm);
         setip(I24_imm);
         break;
 
-    case 0x3d: /* jalr $rs1 */
+    case 0x3d: /* jr $rs1 */
         if (emu.debug)
-            printf("jal   $r%d\n", RS1);
+            printf("jr    $r%d\n", RS1);
         setip(R[RS1]);
+        break;
+
+    case 0x3e: /* je $rs1, $rs2, label */
+        if (emu.debug)
+            printf("je    $r%d $r%d, 0x%X\n", RS1, RS2, RI16_imm);
+        if (R[RS1] == R[RS2])
+            setip(RI16_imm);
+        break;
+
+    case 0x3f: /* jne $rs1, $rs2, label */
+        if (emu.debug)
+            printf("je    $r%d $r%d, 0x%X\n", RS1, RS2, RI16_imm);
+        if (R[RS1] != R[RS2])
+            setip(RI16_imm);
         break;
     }
     emu.ip++, emu.cycles++;
+    R[0] = 0x0; // $r0 is hard wired to 0
     goto cpu_loop;
 }
