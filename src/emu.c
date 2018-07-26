@@ -32,7 +32,7 @@ static void swi(uint32_t icode)
     switch (icode) {
     case 0x00: /* exit */
         free(emu.code);
-        exit(R[5]);
+        exit(R[4]);
     case 0x01: /* reg dump */
         for (int i = 0; i < 32; i++) {
             printf("r%-2d   0x%llX   (%llu)\n", i, R[i], R[i]);
@@ -42,6 +42,43 @@ static void swi(uint32_t icode)
         printf("%c", (int)R[5]);
         break;
     }
+}
+
+static void save_frame()
+{
+    uint64_t fp = SP;
+    PUSH(32); // ra
+    PUSH(31); // fp
+
+    FP = fp; // new frame ptr
+
+    // saved registers
+    PUSH(17);
+    PUSH(18);
+    PUSH(19);
+    PUSH(20);
+    PUSH(21);
+    PUSH(22);
+    PUSH(23);
+    PUSH(24);
+
+    RA = (uint64_t)emu.ip;
+}
+
+static void restore_frame()
+{
+    emu.ip = (uint32_t*)RA;
+    // saved registers
+    POP(23);
+    POP(22);
+    POP(21);
+    POP(20);
+    POP(19);
+    POP(18);
+    POP(17);
+    POP(16);
+    POP(30); // fp
+    POP(31); // ra
 }
 
 static inline void align16check(uint64_t addr)
@@ -101,9 +138,8 @@ void exec()
 {
     uint64_t addr;
     emu.cycles = 0;
-    // emu.debug = 1;
     emu.ip = emu.code;
-    SP = (uint64_t)emu.mem;
+    SP = (uint64_t)emu.mem + sizeof(emu.mem);
 
 cpu_loop:
     if (emu.debug)
@@ -492,10 +528,23 @@ cpu_loop:
         POP(RD);
         break;
 
+    case 0x3a: /* call label */
+        if (emu.debug)
+            printf("call  0x%X\n", I24_imm);
+        save_frame();
+        setip(I24_imm - 1);
+        break;
+
+    case 0x3b: /* ret */
+        if (emu.debug)
+            printf("ret\n");
+        restore_frame();
+        break;
+
     case 0x3c: /* j label */
         if (emu.debug)
             printf("j     0x%X\n", I24_imm);
-        setip(I24_imm);
+        setip(I24_imm - 1);
         break;
 
     case 0x3d: /* jr $rs1 */
@@ -508,14 +557,14 @@ cpu_loop:
         if (emu.debug)
             printf("je    $r%d $r%d, 0x%X\n", RS1, RS2, RI16_imm);
         if (R[RS1] == R[RS2])
-            setip(RI16_imm);
+            setip(RI16_imm - 1);
         break;
 
     case 0x3f: /* jne $rs1, $rs2, label */
         if (emu.debug)
             printf("je    $r%d $r%d, 0x%X\n", RS1, RS2, RI16_imm);
         if (R[RS1] != R[RS2])
-            setip(RI16_imm);
+            setip(RI16_imm - 1);
         break;
     }
     emu.ip++, emu.cycles++;

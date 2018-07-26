@@ -25,7 +25,6 @@ typedef struct {
     uint32_t op, rs1, rs2;
     uint32_t instr;
     char*    label;
-    uint32_t addr;
 } instr_t;
 
 typedef struct {
@@ -40,17 +39,17 @@ static struct {
 
 static void rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off)
 {
-    vector_push(asmgen.code, (instr_t){ 0, 0, 0, RR(op, rd, rs1, rs2, off), NULL, 0 });
+    vector_push(asmgen.code, (instr_t){ 0, 0, 0, RR(op, rd, rs1, rs2, off), NULL });
 }
 
 static void ri16(uint32_t op, uint32_t rd, uint32_t rs1, int16_t imm16)
 {
-    vector_push(asmgen.code, (instr_t){ 0, 0, 0, RI16(op, rd, rs1, imm16), NULL, 0 });
+    vector_push(asmgen.code, (instr_t){ 0, 0, 0, RI16(op, rd, rs1, imm16), NULL });
 }
 
-static void jmp(uint32_t op, uint32_t rs1, uint32_t rs2, char* label)
+static void direct_jmp(uint32_t op, uint32_t rs1, uint32_t rs2, char* label)
 {
-    vector_push(asmgen.code, (instr_t){ op, rs1, rs2, 0, label, vector_length(asmgen.code) });
+    vector_push(asmgen.code, (instr_t){ op, rs1, rs2, 0, label });
 }
 
 void label(char* name)
@@ -63,7 +62,7 @@ void label(char* name)
         }
     }
 
-    vector_push(asmgen.labels, (label_t){ name, vector_length(asmgen.labels) });
+    vector_push(asmgen.labels, (label_t){ name, vector_length(asmgen.code) });
 }
 
 void nop()
@@ -333,32 +332,32 @@ void pop(uint32_t rd)
 
 void call(char* label)
 {
-    jmp(0x3a, 0, 0, label);
+    direct_jmp(0x3a, 0, 0, label);
 }
 
-void callr(char* label)
+void ret()
 {
-    jmp(0x3b, 0, 0, label);
+    rr(0x3b, 0, 0, 0, 0);
 }
 
 void j(char* label)
 {
-    jmp(0x3c, 0, 0, label);
+    direct_jmp(0x3c, 0, 0, label);
 }
 
 void jr(uint32_t rs1, char* label)
 {
-    jmp(0x3d, rs1, 0, label);
+    direct_jmp(0x3d, rs1, 0, label);
 }
 
 void je(uint32_t rs1, uint32_t rs2, char* label)
 {
-    jmp(0x3e, rs1, rs2, label);
+    direct_jmp(0x3e, rs1, rs2, label);
 }
 
 void jne(uint32_t rs1, uint32_t rs2, char* label)
 {
-    jmp(0x3f, rs1, rs2, label);
+    direct_jmp(0x3f, rs1, rs2, label);
 }
 
 uint32_t* gen()
@@ -370,12 +369,18 @@ uint32_t* gen()
     vector_iter(instr_t, ir, asmgen.code)
     {
         if (ir->label) {
+            int found = 0;
             vector_iter(label_t, label, asmgen.labels)
             {
                 if (strcmp(ir->label, label->name) == 0) {
-                    code[addr++] = I24(ir->op, ir->addr);
+                    code[addr++] = I24(ir->op, label->addr);
+                    found++;
                     break;
                 }
+            }
+
+            if (!found) {
+                printf("reference to missing label '%s'\n", ir->label);
             }
         } else {
             code[addr++] = ir->instr;

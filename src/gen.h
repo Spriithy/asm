@@ -60,7 +60,7 @@ void push(uint32_t rs1);
 void popw(uint32_t rd);
 void pop(uint32_t rd);
 void call(char* label);
-void callr(char* label);
+void ret();
 void j(char* label);
 void jr(uint32_t rs1, char* label);
 void je(uint32_t rs1, uint32_t rs2, char* label);
