@@ -13,6 +13,7 @@
 #define RS2 (int)((*emu.ip >> 16) & 0x1f)
 #define OFFSET (int)(sext(*emu.ip >> 21, 11))
 #define RI16_imm (uint16_t)(*emu.ip >> 16)
+#define I24_imm (uint32_t)(*emu.ip >> 8)
 
 typedef struct {
     uint8_t   mem[64 * Mb];

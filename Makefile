@@ -1,6 +1,6 @@
 NAME=emu-64
 CC=clang
-CLFAGS=-g -std=c11 -Wall -Wextra -Werror
+CFLAGS=-g -std=c11 -Wall -Wextra -Werror
 
 SRC=$(wildcard *.c) $(wildcard src/*.c) $(wildcard src/**/*.c)
 OBJ=$(patsubst %.c,%.o, $(SRC))

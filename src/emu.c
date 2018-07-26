@@ -5,6 +5,8 @@
 
 #define R emu.reg
 
+#define setip(offs) emu.ip = emu.code + offs;
+
 emulator_t emu;
 
 static void swi(uint32_t icode)
@@ -441,6 +443,18 @@ cpu_loop:
             printf("divu  $r%d, $r%d\n", RS1, RS2);
         emu.hi = R[RS1] % R[RS2];
         emu.lo = R[RS1] / R[RS2];
+        break;
+
+    case 0x3c: /* jal label */
+        if (emu.debug)
+            printf("jal   0x%X\n", I24_imm);
+        setip(I24_imm);
+        break;
+
+    case 0x3d: /* jalr $rs1 */
+        if (emu.debug)
+            printf("jal   $r%d\n", RS1);
+        setip(R[RS1]);
         break;
     }
     emu.ip++, emu.cycles++;

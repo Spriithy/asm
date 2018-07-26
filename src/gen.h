@@ -3,48 +3,61 @@
 
 #include <stdint.h>
 
-#define OP32(op) (op & 0x3f)
+uint32_t* gen();
 
-#define RR(op, rd, rs1, rs2, off) (OP32(op) \
-    | ((rd & 0x1f) << 6)                    \
-    | ((rs1 & 0x1f) << 11)                  \
-    | ((rs2 & 0x1f) << 16)                  \
-    | (off << 21))
+void label(char* name);
+void nop();
+void int_(uint32_t rd, int16_t icode);
+void intr(uint32_t rd, uint32_t rs1);
+void set_breakpoint();
+void lb(uint32_t rd, uint32_t rs1, int off);
+void lbu(uint32_t rd, uint32_t rs1, int off);
+void lh(uint32_t rd, uint32_t rs1, int off);
+void lhu(uint32_t rd, uint32_t rs1, int off);
+void lui(uint32_t rd, int16_t imm16);
+void lw(uint32_t rd, uint32_t rs1, int off);
+void lwu(uint32_t rd, uint32_t rs1, int off);
+void ld(uint32_t rd, uint32_t rs1, int off);
+void sb(uint32_t rs1, int off, uint32_t rd);
+void sh(uint32_t rs1, int off, uint32_t rd);
+void sw(uint32_t rs1, int off, uint32_t rd);
+void sd(uint32_t rs1, int off, uint32_t rd);
+void mov(uint32_t rd, uint32_t rs1);
+void mfhi(uint32_t rd);
+void mthi(uint32_t rs1);
+void mflo(uint32_t rd);
+void mtlo(uint32_t rs1);
+void slt(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void sltu(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void slti(uint32_t rd, uint32_t rs1, int16_t imm16);
+void sltiu(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void eq(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void eqi(uint32_t rd, uint32_t rs1, int16_t imm16);
+void eqiu(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void or_(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void ori(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void and_(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void andi(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void xor_(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void xori(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void not(uint32_t rd, uint32_t rs1);
+void nor(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void shl(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void shli(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void shr(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void shri(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void add(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void addi(uint32_t rd, uint32_t rs1, int16_t imm16);
+void addiu(uint32_t rd, uint32_t rs1, uint16_t imm16);
+void sub(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void subu(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void mul(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void mulu(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void div_(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void divu(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void jal(char* label);
+void jalr(uint32_t rs1, char* label);
+void je(uint32_t rs1, uint32_t rs2, char* label);
+void jne(uint32_t rs1, uint32_t rs2, char* label);
 
-#define RI16(op, rd, rs1, imm16) (OP32(op) \
-    | ((rd & 0x1f) << 6)                   \
-    | ((rs1 & 0x1f) << 11)                 \
-    | ((imm16 & 0xffff) << 16))
-
-#define NOP() OP32(0x00)
-#define INT(rd, icode) RI16(0x01, rd, 0, (icode)&0xffff)
-#define INTR(rd, rs1) RR(0x02, rd, rs1, 0, 0)
-#define BRKPT() OP32(0x03)
-#define LB(rd, rs1, off) RR(0x04, rd, rs1, 0, off)
-#define LBU(rd, rs1, off) RR(0x05, rd, rs1, 0, off)
-#define LH(rd, rs1, off) RR(0x06, rd, rs1, 0, off)
-#define LHU(rd, rs1, off) RR(0x07, rd, rs1, 0, off)
-#define LUI(rd, imm16) RI16(0x08, rd, 0, imm16)
-#define LW(rd, rs1, off) RR(0x09, rd, rs1, 0, off)
-#define LWU(rd, rs1, off) RR(0x0a, rd, rs1, 0, off)
-#define LD(rd, rs1, off) RR(0x0b, rd, rs1, 0, off)
-#define SB(rs1, rd, off) RR(0x0c, rd, rs1, 0, off)
-#define SH(rs1, rd, off) RR(0x0d, rd, rs1, 0, off)
-#define SW(rs1, rd, off) RR(0x0e, rd, rs1, 0, off)
-#define SD(rs1, rd, off) RR(0x0f, rd, rs1, 0, off)
-#define MOV(rd, rs1) RR(0x10, rd, rs1, 0, 0)
-#define MFHI(rd) RR(0x11, rd, 0, 0, 0)
-#define MTHI(rs1) RR(0x12, 0, rs1, 0, 0)
-#define MFLO(rd) RR(0x13, rd, 0, 0, 0)
-#define MTLO(rs1) RR(0x14, 0, rs1, 0, 0)
-#define SLT(rd, rs1, rs2) RR(0x15, rd, rs1, rs2, 0)
-#define SLTU(rd, rs1, rs2) RR(0x16, rd, rs1, rs2, 0)
-#define SLTI(rd, rs1, imm16) RI16(0x17, rd, rs1, imm16)
-#define SLTIU(rd, rs1, imm16) RI16(0x18, rd, rs1, imm16)
-#define EQ(rd, rs1, rs2) RR(0x19, rd, rs1, rs2, 0)
-#define EQI(rd, rs1, imm16) RI16(0x1a, rd, rs1, imm16)
-
-#define OR(rd, rs1, rs2) RR(0x20, rd, rs1, rs2, 0)
-#define ORI(rd, rs1, imm16) RI16(0x21, rd, rs1, imm16)
-
-#endif // end.h
+#endif // gen.h
