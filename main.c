@@ -68,9 +68,8 @@ int main(int argc, char** argv)
 
         label("print.L2");
         addi(t0, zero, 10);
-        div_(s0, t0); // n / 10
+        div_(s1, s0, t0); // s1 = n / 10
         mfhi(s2); // n%10
-        mflo(s1); // n/10
 
         je(s1, zero, "print.L3");
         mov(a0, s1);
@@ -86,15 +85,14 @@ int main(int argc, char** argv)
     {
         mov(s0, a0);
         jne(s0, zero, "fact.L1");
-        addi(v0, zero, 1);
+        li(v0, 1);
         ret();
 
         label("fact.L1");
         addi(a0, s0, -1);
         call("fact");
 
-        mul(s0, v0);
-        mflo(v0);
+        mul(v0, s0, v0);
         ret();
     }
 

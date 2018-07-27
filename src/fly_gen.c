@@ -144,6 +144,17 @@ void la(uint32_t rd, char* name)
     direct_jmp(0xff, rd, 0, name);
 }
 
+void li(uint32_t rd, uint32_t imm)
+{
+    if ((imm >> 16) == 0) {
+        ori(rd, 0, imm);
+        return;
+    }
+
+    lui(1, imm >> 16);
+    ori(rd, 1, imm & 0xffff);
+}
+
 void sb(uint32_t rd, uint32_t rs1, int off)
 {
     rr(0x0c, rd, rs1, 0, off);
@@ -166,7 +177,7 @@ void sd(uint32_t rd, uint32_t rs1, int off)
 
 void mov(uint32_t rd, uint32_t rs1)
 {
-    rr(0x10, rd, rs1, 0, 0);
+    add(rd, rs1, 0);
 }
 
 void mfhi(uint32_t rd)
@@ -309,24 +320,40 @@ void subu(uint32_t rd, uint32_t rs1, uint32_t rs2)
     rr(0x30, rd, rs1, rs2, 0);
 }
 
-void mul(uint32_t rs1, uint32_t rs2)
+void mul(uint32_t rd, uint32_t rs1, uint32_t rs2)
 {
     rr(0x31, 0, rs1, rs2, 0);
+    mflo(rd);
 }
 
-void mulu(uint32_t rs1, uint32_t rs2)
+void mulu(uint32_t rd, uint32_t rs1, uint32_t rs2)
 {
     rr(0x32, 0, rs1, rs2, 0);
+    mflo(rd);
 }
 
-void div_(uint32_t rs1, uint32_t rs2)
+void div_(uint32_t rd, uint32_t rs1, uint32_t rs2)
 {
     rr(0x33, 0, rs1, rs2, 0);
+    mflo(rd);
 }
 
-void divu(uint32_t rs1, uint32_t rs2)
+void divu(uint32_t rd, uint32_t rs1, uint32_t rs2)
 {
     rr(0x34, 0, rs1, rs2, 0);
+    mflo(rd);
+}
+
+void mod(uint32_t rd, uint32_t rs1, uint32_t rs2)
+{
+    rr(0x33, 0, rs1, rs2, 0);
+    mfhi(rd);
+}
+
+void modu(uint32_t rd, uint32_t rs1, uint32_t rs2)
+{
+    rr(0x34, 0, rs1, rs2, 0);
+    mfhi(rd);
 }
 
 void pushw(uint32_t rs1)

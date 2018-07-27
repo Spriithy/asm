@@ -213,7 +213,7 @@ cpu_loop:
 
     case 0x08: /* lui %RD, $imm16 */
         show_disas();
-        R[RD] = (I16 << 16) | (R[RD] & 0xfffff);
+        R[RD] = (I16 << 16);
         break;
 
     case 0x09: /* lw %RD, offset(%RS1) */
