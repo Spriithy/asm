@@ -1,10 +1,10 @@
-#include "src/emu.h"
 #include "src/gen.h"
+#include "src/run/cpu.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-extern emulator_t emu;
-extern asmgen_t   asmgen;
+extern cpu_t    cpu;
+extern asmgen_t asmgen;
 
 int main(void)
 {

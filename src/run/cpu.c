@@ -1,9 +1,9 @@
-#include "emu.h"
+#include "cpu.h"
 #include "breakpoint.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#define R emu.reg
+#define R cpu.reg
 #define GP R[28]
 #define SP R[29]
 #define FP R[30]
@@ -23,15 +23,15 @@
         SP += 4;              \
     }
 
-#define setip(addr) emu.ip = (uint32_t*)(addr)
+#define setip(addr) cpu.ip = (uint32_t*)(addr)
 
-emulator_t emu;
+cpu_t cpu;
 
 static void swi(uint32_t icode)
 {
     switch (icode) {
     case 0x00: /* exit */
-        free(emu.code);
+        free(cpu.code);
         exit(R[4]);
     case 5:
         putchar((int)R[4]);
@@ -43,9 +43,9 @@ static void save_frame()
 {
     PUSH(RA);
     PUSH(FP);
-    RA = (uint64_t)emu.ip;
+    RA = (uint64_t)cpu.ip;
     FP = SP;
-    setip(emu.code + I24_imm - 1);
+    setip(cpu.code + I24_imm - 1);
 
     PUSH(R[16]);
     PUSH(R[17]);
@@ -113,30 +113,30 @@ void hilo_umul(uint64_t rs1, uint64_t rs2)
     t = (u1 * rs2) + k;
     k = (t >> 32);
 
-    emu.hi = (rs1 * rs2) + w1 + k;
-    emu.lo = (t << 32) + w3;
+    cpu.hi = (rs1 * rs2) + w1 + k;
+    cpu.lo = (t << 32) + w3;
 }
 
 void hilo_mul(int64_t rs1, int64_t rs2)
 {
     hilo_umul((uint64_t)rs1, (uint64_t)rs2);
     if (rs1 < 0LL)
-        emu.hi -= rs2;
+        cpu.hi -= rs2;
     if (rs2 < 0LL)
-        emu.hi -= rs1;
+        cpu.hi -= rs1;
 }
 
 void exec()
 {
     uint64_t addr;
 
-    emu.cycles = 0;
-    emu.ip = emu.code;
-    GP = FP = SP = (uint64_t)emu.mem + sizeof(emu.mem);
+    cpu.cycles = 0;
+    cpu.ip = cpu.code;
+    GP = FP = SP = (uint64_t)cpu.mem + sizeof(cpu.mem);
 
 cpu_loop:
     if (DEBUG)
-        printf("0x%-6X 0x%-10x ", (int)(emu.ip - emu.code), *emu.ip);
+        printf("0x%-6X 0x%-10x ", (int)(cpu.ip - cpu.code), *cpu.ip);
 
     switch (OP) {
     case 0x00: /* nop */
@@ -161,7 +161,7 @@ cpu_loop:
             printf("breakpoint\n");
             breakpoint();
 
-            emu.ip++, emu.cycles++;
+            cpu.ip++, cpu.cycles++;
             R[0] = 0x0; // $r0 is hard wired to 0
             goto cpu_loop;
         }
@@ -311,25 +311,25 @@ cpu_loop:
     case 0x11: /* mfhi %rd */
         if (DEBUG)
             printf("mfhi  $r%d\n", RD);
-        R[RD] = emu.hi;
+        R[RD] = cpu.hi;
         break;
 
     case 0x12: /* mthi %rs1 */
         if (DEBUG)
             printf("mthi  $r%d\n", RS1);
-        emu.hi = R[RS1];
+        cpu.hi = R[RS1];
         break;
 
     case 0x13: /* mflo %rd */
         if (DEBUG)
             printf("mflo  $r%d\n", RD);
-        R[RD] = emu.lo;
+        R[RD] = cpu.lo;
         break;
 
     case 0x14: /* mtlo %rs1 */
         if (DEBUG)
             printf("mtlo  $r%d\n", RS1);
-        emu.lo = R[RS1];
+        cpu.lo = R[RS1];
         break;
 
     case 0x15: /* slt $rd, $rs1, $rs2 */
@@ -491,15 +491,15 @@ cpu_loop:
     case 0x33: /* div $rs1, $rs2 */
         if (DEBUG)
             printf("div   $r%d, $r%d\n", RS1, RS2);
-        emu.hi = (int64_t)R[RS1] % (int64_t)R[RS2];
-        emu.lo = (int64_t)R[RS1] / (int64_t)R[RS2];
+        cpu.hi = (int64_t)R[RS1] % (int64_t)R[RS2];
+        cpu.lo = (int64_t)R[RS1] / (int64_t)R[RS2];
         break;
 
     case 0x34: /* divu $rs1, $rs2 */
         if (DEBUG)
             printf("divu  $r%d, $r%d\n", RS1, RS2);
-        emu.hi = R[RS1] % R[RS2];
-        emu.lo = R[RS1] / R[RS2];
+        cpu.hi = R[RS1] % R[RS2];
+        cpu.lo = R[RS1] / R[RS2];
         break;
 
     case 0x36: /* pushw $rd */
@@ -528,7 +528,7 @@ cpu_loop:
 
     case 0x3a: /* call label */
 #if DEBUG
-        printf("call  0x%X<%s>\n", I24_imm, emu.labels[I24_imm]);
+        printf("call  0x%X<%s>\n", I24_imm, cpu.labels[I24_imm]);
 #endif
         save_frame();
         break;
@@ -541,41 +541,41 @@ cpu_loop:
 
     case 0x3c: /* j label */
 #if DEBUG
-        printf("j     0x%X<%s>\n", I24_imm, emu.labels[I24_imm]);
+        printf("j     0x%X<%s>\n", I24_imm, cpu.labels[I24_imm]);
 #endif
-        setip(emu.code + I24_imm - 1);
+        setip(cpu.code + I24_imm - 1);
         break;
 
     case 0x3d: /* jr $rs1 */
 #if DEBUG
-        printf("jr    $r%d<%s>\n", RD, emu.labels[R[RD]]);
+        printf("jr    $r%d<%s>\n", RD, cpu.labels[R[RD]]);
 #endif
         setip(R[RD]);
         break;
 
     case 0x3e: /* je $rs1, $rs2, label */
 #if DEBUG
-        printf("je    $r%d $r%d, 0x%X<%s>\n", RD, RS1, RI16_imm, emu.labels[RI16_imm]);
+        printf("je    $r%d $r%d, 0x%X<%s>\n", RD, RS1, RI16_imm, cpu.labels[RI16_imm]);
 #endif
         if (R[RD] == R[RS1])
-            setip(emu.code + RI16_imm - 1);
+            setip(cpu.code + RI16_imm - 1);
         break;
 
     case 0x3f: /* jne $rs1, $rs2, label */
 #if DEBUG
-        printf("jne   $r%d $r%d, 0x%X<%s>\n", RD, RS1, RI16_imm, emu.labels[RI16_imm]);
+        printf("jne   $r%d $r%d, 0x%X<%s>\n", RD, RS1, RI16_imm, cpu.labels[RI16_imm]);
 #endif
         if (R[RD] != R[RS1])
-            setip(emu.code + RI16_imm - 1);
+            setip(cpu.code + RI16_imm - 1);
         break;
     }
 
-    emu.ip++, emu.cycles++;
+    cpu.ip++, cpu.cycles++;
     R[0] = 0x0; // $r0 is hard wired to 0
 
 #if DEBUG
-    if (emu.step_mode) {
-        emu.step_mode = 0;
+    if (cpu.step_mode) {
+        cpu.step_mode = 0;
         breakpoint();
     }
 #endif

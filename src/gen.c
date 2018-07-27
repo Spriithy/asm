@@ -1,5 +1,5 @@
 #include "gen.h"
-#include "emu.h"
+#include "run/cpu.h"
 #include "vector.h"
 #include <ctype.h>
 #include <stdint.h>
@@ -24,7 +24,7 @@
 
 asmgen_t asmgen;
 
-extern emulator_t emu;
+extern cpu_t cpu;
 
 static void rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off)
 {
@@ -359,7 +359,7 @@ void gen()
     {
         labels[label->addr] = label->name;
     }
-    emu.labels = labels;
+    cpu.labels = labels;
 #endif
 
     size_t addr = 0;
@@ -400,5 +400,5 @@ void gen()
         }
     }
 
-    emu.code = code;
+    cpu.code = code;
 }
