@@ -1,4 +1,4 @@
-#include "gen.h"
+#include "fly_gen.h"
 #include "run/cpu.h"
 #include "vector.h"
 #include <ctype.h>
@@ -353,14 +353,14 @@ void gen()
 {
     uint32_t* code = malloc(vector_length(asmgen.code) * sizeof(*code));
 
-#if DEBUG
-    char** labels = malloc(vector_length(asmgen.code) * sizeof(*code));
-    vector_iter(label_t, label, asmgen.labels)
-    {
-        labels[label->addr] = label->name;
+    if (cpu.debug) {
+        char** labels = malloc(vector_length(asmgen.code) * sizeof(*code));
+        vector_iter(label_t, label, asmgen.labels)
+        {
+            labels[label->addr] = label->name;
+        }
+        cpu.labels = labels;
     }
-    cpu.labels = labels;
-#endif
 
     size_t addr = 0;
 

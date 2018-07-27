@@ -1,13 +1,22 @@
-#include "src/gen.h"
+#include "src/fly_gen.h"
 #include "src/run/cpu.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 extern cpu_t    cpu;
 extern asmgen_t asmgen;
 
-int main(void)
+int main(int argc, char** argv)
 {
+    cpu.debug = 0;
+
+    if (argc > 0) {
+        for (int i = 0; i < argc; i++) {
+            cpu.debug = strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0;
+        }
+    }
+
 #define EXIT 0
 #define PRINT 5
 

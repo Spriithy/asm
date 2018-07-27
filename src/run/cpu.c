@@ -135,16 +135,11 @@ void hilo_mul(int64_t rs1, int64_t rs2)
         cpu.hi -= rs1;
 }
 
-#if DEBUG
 void show_disas()
 {
-    disasm(stdout, cpu.ip, 1);
+    if (cpu.debug)
+        disasm(stdout, cpu.ip, 1);
 }
-#else
-void show_disas()
-{
-}
-#endif
 
 void exec()
 {
@@ -155,7 +150,7 @@ void exec()
     GP = FP = SP = (uint64_t)cpu.mem + sizeof(cpu.mem);
 
 cpu_loop:
-    if (DEBUG)
+    if (cpu.debug)
         printf("0x%-6X 0x%-10x ", (int)(cpu.ip - cpu.code), *cpu.ip);
 
     switch (OP) {
@@ -175,7 +170,7 @@ cpu_loop:
 
     case 0x03: /* breakpoint */
         show_disas();
-        if (DEBUG) {
+        if (cpu.debug) {
             breakpoint();
 
             cpu.ip++, cpu.cycles++;
@@ -456,8 +451,7 @@ cpu_loop:
         break;
 
     case 0x3b: /* ret */
-        if (DEBUG)
-            printf("ret\n");
+        show_disas();
         restore_frame();
         break;
 
@@ -487,12 +481,10 @@ cpu_loop:
     cpu.ip++, cpu.cycles++;
     R[0] = 0x0; // $r0 is hard wired to 0
 
-#if DEBUG
-    if (cpu.step_mode) {
+    if (cpu.debug && cpu.step_mode) {
         cpu.step_mode = 0;
         breakpoint();
     }
-#endif
 
     goto cpu_loop;
 }

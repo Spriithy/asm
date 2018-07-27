@@ -1,15 +1,9 @@
 #include "disasm.h"
 #include "common.h"
 #include "decode.h"
-
-#if DEBUG
 #include "run/cpu.h"
 
 extern cpu_t cpu;
-
-#define R cpu.reg
-
-#endif
 
 #define OP DECODE_OP(code[i])
 #define RD DECODE_RD(code[i])
@@ -273,11 +267,10 @@ void disasm(FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3a: /* call label */
-#if DEBUG
-            fprintf(f, "call  0x%X<%s>\n", I24, cpu.labels[I24]);
-#else
-            fprintf(f, "call  0x%X\n", I24);
-#endif
+            if (cpu.debug)
+                fprintf(f, "call  0x%X<%s>\n", I24, cpu.labels[I24]);
+            else
+                fprintf(f, "call  0x%X\n", I24);
             break;
 
         case 0x3b: /* ret */
@@ -285,35 +278,31 @@ void disasm(FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3c: /* j label */
-#if DEBUG
-            fprintf(f, "j     0x%X<%s>\n", I24, cpu.labels[I24]);
-#else
-            fprintf(f, "j     0x%X\n", I24);
-#endif
+            if (cpu.debug)
+                fprintf(f, "j     0x%X<%s>\n", I24, cpu.labels[I24]);
+            else
+                fprintf(f, "j     0x%X\n", I24);
             break;
 
         case 0x3d: /* jr $rs1 */
-#if DEBUG
-            fprintf(f, "jr    $r%d<%s>\n", RD, cpu.labels[R[RD]]);
-#else
-            fprintf(f, "jr    $r%d\n", RD);
-#endif
+            if (cpu.debug)
+                fprintf(f, "jr    $r%d<%s>\n", RD, cpu.labels[cpu.reg[RD]]);
+            else
+                fprintf(f, "jr    $r%d\n", RD);
             break;
 
         case 0x3e: /* je $rs1, $rs2, label */
-#if DEBUG
-            fprintf(f, "je    $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.labels[I16]);
-#else
-            fprintf(f, "je    $r%d $r%d, 0x%X\n", RD, RS1, I16);
-#endif
+            if (cpu.debug)
+                fprintf(f, "je    $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.labels[I16]);
+            else
+                fprintf(f, "je    $r%d $r%d, 0x%X\n", RD, RS1, I16);
             break;
 
         case 0x3f: /* jne $rs1, $rs2, label */
-#if DEBUG
-            fprintf(f, "jne   $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.labels[I16]);
-#else
-            fprintf(f, "jne   $r%d $r%d, 0x%X\n", RD, RS1, I16);
-#endif
+            if (cpu.debug)
+                fprintf(f, "jne   $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.labels[I16]);
+            else
+                fprintf(f, "jne   $r%d $r%d, 0x%X\n", RD, RS1, I16);
             break;
         }
     }
