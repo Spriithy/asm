@@ -11,12 +11,14 @@ int main(void)
 #define EXIT 0
 #define PRINT 5
 
+    load_gen_utils();
+
     label("_start");
     {
-        addi(4, 0, 0); // argc
-        addi(5, 0, 0); // argv
+        addi(a0, zero, zero); // argc
+        addi(a1, zero, zero); // argv
         call("main");
-        mov(4, 2);
+        mov(a0, v0);
         int_(EXIT);
     }
 
@@ -28,7 +30,7 @@ int main(void)
 
     label("__print_as_int");
     {
-        addi(4, 4, '0');
+        addi(a0, a0, '0');
         call("putc");
         ret();
     }
@@ -36,47 +38,65 @@ int main(void)
     label("print");
     {
         set_breakpoint();
-        mov(16, 4); // n
+        mov(s0, a0); // n
 
-        slt(8, 4, 0); // n < 0 ?
-        je(8, 0, "__print_L1");
-        addi(4, 0, '-');
+        slt(t0, a0, zero); // n < zero ?
+        je(t0, zero, "print.L1");
+        addi(a0, zero, '-');
         call("putc"); // putc('-')
-        addi(8, 0, 1);
-        sub(8, 0, 8);
-        mul(16, 8); // n = -n
-        mflo(16);
+        addi(t0, zero, 1);
+        sub(t0, zero, t0);
+        mul(s0, t0); // n = -n
+        mflo(s0);
 
-        label("__print_L1");
-        jne(16, 0, "__print_L2");
-        addi(4, 0, '0'); // if (n == 0)
-        call("putc"); // putc('0')
+        label("print.L1");
+        jne(s0, zero, "print.L2");
+        addi(a0, zero, '0'); // if (n == zero)
+        call("putc"); // putc('zero')
 
-        label("__print_L2");
-        addi(8, 0, 10);
-        div_(16, 8); // n / 10
-        mfhi(18); // n%10
-        mflo(17); // n/10
+        label("print.L2");
+        addi(t0, zero, 10);
+        div_(s0, t0); // n / 10
+        mfhi(s2); // n%10
+        mflo(s1); // n/10
 
-        je(17, 0, "__print_L3");
-        mov(4, 17);
+        je(s1, zero, "print.L3");
+        mov(a0, s1);
         call("print"); // print(n / 10)
 
-        label("__print_L3");
-        mov(4, 18);
-        call("__print_as_int"); // putc(n%10+'0')
+        label("print.L3");
+        mov(a0, s2);
+        call("__print_as_int"); // putc(n%10+'zero')
+        ret();
+    }
+
+    label("rfact");
+    {
+        mov(s0, a0);
+        sltiu(t0, s0, 2); // n <= 1 ?
+        je(t0, zero, "rfact.L1");
+        addi(v0, zero, 1); // return 1
+        ret();
+        label("rfact.L1");
+        addi(t0, zero, 1);
+        sub(a0, a0, t0);
+        call("rfact");
+        mul(s0, v0); // n * rfact(n - 1)
+        mflo(v0);
         ret();
     }
 
     label("main");
     {
-        addi(4, 0, 0x1A2B);
+        addi(s0, zero, 0x9);
+
+        mov(a0, s0);
         call("print");
 
-        addi(4, 0, '\n');
+        addi(a0, zero, '\n');
         call("putc");
 
-        addi(2, 0, EXIT_SUCCESS);
+        addi(v0, zero, EXIT_SUCCESS);
         ret();
     }
 
@@ -86,5 +106,5 @@ int main(void)
         exec();
     }
 
-    return 0;
+    return zero;
 }

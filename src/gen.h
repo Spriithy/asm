@@ -84,4 +84,14 @@ void jr(uint32_t rs1, char* label);
 void je(uint32_t rs1, uint32_t rs2, char* label);
 void jne(uint32_t rs1, uint32_t rs2, char* label);
 
+#define load_gen_utils()                                                                        \
+    int zero = 0;                                                                               \
+    int at0 = 1, at1 = 26, at2 = 27;                                                            \
+    int v0 = 2, v1 = 3;                                                                         \
+    int a0 = 4, a1 = 5, a2 = 6, a3 = 7;                                                         \
+    int t0 = 8, t1 = 9, t2 = 10, t3 = 11, t4 = 12, t5 = 13, t6 = 14, t7 = 15, t8 = 24, t9 = 25; \
+    int s0 = 16, s1 = 17, s2 = 18, s3 = 19, s4 = 20, s5 = 21, s6 = 22, s7 = 23;                 \
+    int gp = 28, sp = 29, fp = 30;                                                              \
+    int ra = 31;
+
 #endif // gen.h
