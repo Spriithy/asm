@@ -1,4 +1,5 @@
 #include "gen.h"
+#include "emu.h"
 #include "vector.h"
 #include <ctype.h>
 #include <stdint.h>
@@ -21,21 +22,9 @@
 
 #define I24(op, imm24) (OP32(op) | (imm24 << 8))
 
-typedef struct {
-    uint32_t op, rs1, rs2;
-    uint32_t instr;
-    char*    label;
-} instr_t;
+asmgen_t asmgen;
 
-typedef struct {
-    char*    name;
-    uint32_t addr;
-} label_t;
-
-static struct {
-    instr_t* code;
-    label_t* labels;
-} asmgen;
+extern emulator_t emu;
 
 static void rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off)
 {
@@ -290,24 +279,24 @@ void subu(uint32_t rd, uint32_t rs1, uint32_t rs2)
     rr(0x30, rd, rs1, rs2, 0);
 }
 
-void mul(uint32_t rd, uint32_t rs1, uint32_t rs2)
+void mul(uint32_t rs1, uint32_t rs2)
 {
-    rr(0x31, rd, rs1, rs2, 0);
+    rr(0x31, 0, rs1, rs2, 0);
 }
 
-void mulu(uint32_t rd, uint32_t rs1, uint32_t rs2)
+void mulu(uint32_t rs1, uint32_t rs2)
 {
-    rr(0x32, rd, rs1, rs2, 0);
+    rr(0x32, 0, rs1, rs2, 0);
 }
 
-void div_(uint32_t rd, uint32_t rs1, uint32_t rs2)
+void div_(uint32_t rs1, uint32_t rs2)
 {
-    rr(0x33, rd, rs1, rs2, 0);
+    rr(0x33, 0, rs1, rs2, 0);
 }
 
-void divu(uint32_t rd, uint32_t rs1, uint32_t rs2)
+void divu(uint32_t rs1, uint32_t rs2)
 {
-    rr(0x34, rd, rs1, rs2, 0);
+    rr(0x34, 0, rs1, rs2, 0);
 }
 
 void pushw(uint32_t rs1)
@@ -360,9 +349,18 @@ void jne(uint32_t rs1, uint32_t rs2, char* label)
     direct_jmp(0x3f, rs1, rs2, label);
 }
 
-uint32_t* gen()
+void gen()
 {
     uint32_t* code = malloc(vector_length(asmgen.code) * sizeof(*code));
+
+    if (emu.debug) {
+        char** labels = malloc(vector_length(asmgen.code) * sizeof(*code));
+        vector_iter(label_t, label, asmgen.labels)
+        {
+            labels[label->addr] = label->name;
+        }
+        emu.labels = labels;
+    }
 
     size_t addr = 0;
 
@@ -373,7 +371,21 @@ uint32_t* gen()
             vector_iter(label_t, label, asmgen.labels)
             {
                 if (strcmp(ir->label, label->name) == 0) {
-                    code[addr++] = I24(ir->op, label->addr);
+                    switch (ir->op) {
+                    case 0x3a: /* call */
+                    case 0x3c: /* j */
+                        code[addr++] = I24(ir->op, label->addr);
+                        break;
+                    case 0x3d:
+                    case 0x3e:
+                    case 0x3f:
+                        code[addr++] = RI16(ir->op, ir->rs1, ir->rs2, label->addr);
+                        break;
+                    default:
+                        printf("unknown label-referencing instruction 0x%X\n", ir->op);
+                        asmgen.error++;
+                    }
+
                     found++;
                     break;
                 }
@@ -381,14 +393,12 @@ uint32_t* gen()
 
             if (!found) {
                 printf("reference to missing label '%s'\n", ir->label);
+                asmgen.error++;
             }
         } else {
             code[addr++] = ir->instr;
         }
     }
 
-    vector_free(asmgen.code);
-    vector_free(asmgen.labels);
-
-    return code;
+    emu.code = code;
 }

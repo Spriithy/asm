@@ -1,9 +1,27 @@
 #ifndef EMU64_GEN_H
 #define EMU64_GEN_H
 
+#include <stddef.h>
 #include <stdint.h>
 
-uint32_t* gen();
+typedef struct {
+    uint32_t op, rs1, rs2;
+    uint32_t instr;
+    char*    label;
+} instr_t;
+
+typedef struct {
+    char*    name;
+    uint32_t addr;
+} label_t;
+
+typedef struct {
+    instr_t* code;
+    label_t* labels;
+    size_t   error;
+} asmgen_t;
+
+void gen();
 
 void label(char* name);
 void nop();
@@ -51,10 +69,10 @@ void addi(uint32_t rd, uint32_t rs1, int16_t imm16);
 void addiu(uint32_t rd, uint32_t rs1, uint16_t imm16);
 void sub(uint32_t rd, uint32_t rs1, uint32_t rs2);
 void subu(uint32_t rd, uint32_t rs1, uint32_t rs2);
-void mul(uint32_t rd, uint32_t rs1, uint32_t rs2);
-void mulu(uint32_t rd, uint32_t rs1, uint32_t rs2);
-void div_(uint32_t rd, uint32_t rs1, uint32_t rs2);
-void divu(uint32_t rd, uint32_t rs1, uint32_t rs2);
+void mul(uint32_t rs1, uint32_t rs2);
+void mulu(uint32_t rs1, uint32_t rs2);
+void div_(uint32_t rs1, uint32_t rs2);
+void divu(uint32_t rs1, uint32_t rs2);
 void pushw(uint32_t rs1);
 void push(uint32_t rs1);
 void popw(uint32_t rd);
