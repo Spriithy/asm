@@ -36,14 +36,14 @@
 
 cpu_t cpu;
 
-static void swi(uint32_t icode)
+static void interrupt()
 {
-    switch (icode) {
+    switch (R[4]) {
     case 0x00: /* exit */
         free(cpu.code);
-        exit(R[4]);
-    case 5:
-        putchar((int)R[4]);
+        exit(R[5]);
+    case 0x05: /* putchar */
+        putchar((int)R[5]);
         break;
     }
 }
@@ -158,21 +158,15 @@ cpu_loop:
         show_disas();
         break;
 
-    case 0x01: /* int $imm */
+    case 0x01: /* int */
         show_disas();
-        swi(I16);
+        interrupt();
         break;
 
-    case 0x02: /* int %rs1 */
-        show_disas();
-        swi(R[RS1]);
-        break;
-
-    case 0x03: /* breakpoint */
+    case 0x02: /* breakpoint */
         show_disas();
         if (cpu.debug) {
             breakpoint();
-
             cpu.ip++, cpu.cycles++;
             R[0] = 0x0; // $r0 is hard wired to 0
             goto cpu_loop;

@@ -27,13 +27,17 @@ int main(int argc, char** argv)
         addi(a0, zero, 0); // argc
         addi(a1, zero, 0); // argv
         call("main");
-        mov(a0, v0);
-        int_(EXIT);
+        mov(a0, EXIT);
+        mov(a1, v0);
+        set_breakpoint();
+        int_();
     }
 
     label("putc");
     {
-        int_(PRINT);
+        mov(a1, a0);
+        addi(a0, zero, PRINT);
+        int_();
         ret();
     }
 

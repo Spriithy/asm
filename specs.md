@@ -35,8 +35,8 @@ NB:
 
 00  —              —
 01 int             interupt
-02 intr            interupt reg.
-03 breakpoint
+02 breakpoint
+03 
 04 lb
 05 lbu
 06 lh

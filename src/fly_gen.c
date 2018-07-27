@@ -54,24 +54,19 @@ void label(char* name)
     vector_push(asmgen.labels, (label_t){ name, vector_length(asmgen.code) });
 }
 
-void nop()
+void nop(void)
 {
     rr(0, 0, 0, 0, 0);
 }
 
-void int_(int16_t icode)
+void int_(void)
 {
-    ri16(0x01, 0, 0, icode);
+    rr(0x01, 0, 0, 0, 0);
 }
 
-void intr(uint32_t rs1)
+void set_breakpoint(void)
 {
-    rr(0x02, 0, rs1, 0, 0);
-}
-
-void set_breakpoint()
-{
-    rr(0x03, 0, 0, 0, 0);
+    rr(0x02, 0, 0, 0, 0);
 }
 
 void lb(uint32_t rd, uint32_t rs1, int off)
@@ -324,7 +319,7 @@ void call(char* label)
     direct_jmp(0x3a, 0, 0, label);
 }
 
-void ret()
+void ret(void)
 {
     rr(0x3b, 0, 0, 0, 0);
 }

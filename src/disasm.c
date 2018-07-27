@@ -26,14 +26,10 @@ void disasm(FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x01: /* int $imm */
-            fprintf(f, "int   0x%X\n", I16);
+            fprintf(f, "int\n");
             break;
 
-        case 0x02: /* int %rs1 */
-            fprintf(f, "intr  $r%d\n", RS1);
-            break;
-
-        case 0x03: /* breakpoint */
+        case 0x02: /* breakpoint */
             fprintf(f, "breakpoint\n");
             break;
 

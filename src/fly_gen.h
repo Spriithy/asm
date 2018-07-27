@@ -24,10 +24,9 @@ typedef struct {
 void gen();
 
 void label(char* name);
-void nop();
-void int_(int16_t icode);
-void intr(uint32_t rs1);
-void set_breakpoint();
+void nop(void);
+void int_(void);
+void set_breakpoint(void);
 void lb(uint32_t rd, uint32_t rs1, int off);
 void lbu(uint32_t rd, uint32_t rs1, int off);
 void lh(uint32_t rd, uint32_t rs1, int off);
@@ -78,7 +77,7 @@ void push(uint32_t rs1);
 void popw(uint32_t rd);
 void pop(uint32_t rd);
 void call(char* label);
-void ret();
+void ret(void);
 void j(char* label);
 void jr(uint32_t rs1, char* label);
 void je(uint32_t rs1, uint32_t rs2, char* label);
