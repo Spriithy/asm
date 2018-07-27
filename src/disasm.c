@@ -13,7 +13,7 @@ extern cpu_t cpu;
 #define I16 DECODE_I16(code[i])
 #define I24 DECODE_I24(code[i])
 
-static char* reg_name(int r)
+char* reg_name(int r)
 {
     static char* names[] = {
         [0] = "$zero",
@@ -39,7 +39,7 @@ static char* reg_name(int r)
         [20] = "$s4",
         [21] = "$s5",
         [22] = "$s6",
-        [23] = "$s8",
+        [23] = "$s7",
         [24] = "$t8",
         [25] = "$t9",
         [26] = "$k0",

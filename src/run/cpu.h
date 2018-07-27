@@ -7,7 +7,7 @@
 
 typedef struct {
     // Base
-    uint32_t  text[0x200000];
+    uint32_t  text[0x80000];
     uint8_t   data[0x1e00000];
     uint64_t  reg[32];
     uint32_t* ip;

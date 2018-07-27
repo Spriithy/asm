@@ -13,17 +13,29 @@ typedef struct {
 typedef struct {
     char*    name;
     uint32_t addr;
-} label_t;
+} sym_t;
+
+typedef sym_t label_t;
 
 typedef struct {
-    instr_t* code;
-    label_t* labels;
-    size_t   error;
+    sym_t    sym;
+    uint8_t* data;
+    size_t   data_size;
+} datasym_t;
+
+typedef struct {
+    instr_t*   code;
+    label_t*   labels;
+    datasym_t* data_syms;
+    size_t     data_offset;
+    size_t     error;
 } asmgen_t;
 
 void gen();
 
+void data(char* name, uint8_t* data, size_t data_size);
 void label(char* name);
+
 void nop(void);
 void int_(void);
 void set_breakpoint(void);
@@ -35,10 +47,11 @@ void lui(uint32_t rd, int16_t imm16);
 void lw(uint32_t rd, uint32_t rs1, int off);
 void lwu(uint32_t rd, uint32_t rs1, int off);
 void ld(uint32_t rd, uint32_t rs1, int off);
-void sb(uint32_t rs1, int off, uint32_t rd);
-void sh(uint32_t rs1, int off, uint32_t rd);
-void sw(uint32_t rs1, int off, uint32_t rd);
-void sd(uint32_t rs1, int off, uint32_t rd);
+void la(uint32_t rd, char* name);
+void sb(uint32_t rd, uint32_t rs1, int off);
+void sh(uint32_t rd, uint32_t rs1, int off);
+void sw(uint32_t rd, uint32_t rs1, int off);
+void sd(uint32_t rd, uint32_t rs1, int off);
 void mov(uint32_t rd, uint32_t rs1);
 void mfhi(uint32_t rd);
 void mthi(uint32_t rs1);
@@ -79,18 +92,19 @@ void pop(uint32_t rd);
 void call(char* label);
 void ret(void);
 void j(char* label);
-void jr(uint32_t rs1, char* label);
+void jr(uint32_t rs1);
 void je(uint32_t rs1, uint32_t rs2, char* label);
 void jne(uint32_t rs1, uint32_t rs2, char* label);
 
 #define load_gen_utils()                                                                        \
     int zero = 0;                                                                               \
-    int at0 = 1, at1 = 26, at2 = 27;                                                            \
+    int at = 1;                                                                                 \
     int v0 = 2, v1 = 3;                                                                         \
     int a0 = 4, a1 = 5, a2 = 6, a3 = 7;                                                         \
     int t0 = 8, t1 = 9, t2 = 10, t3 = 11, t4 = 12, t5 = 13, t6 = 14, t7 = 15, t8 = 24, t9 = 25; \
     int s0 = 16, s1 = 17, s2 = 18, s3 = 19, s4 = 20, s5 = 21, s6 = 22, s7 = 23;                 \
     int gp = 28, sp = 29, fp = 30;                                                              \
+    int k0 = 26, k1 = 27;                                                                       \
     int ra = 31;
 
 #endif // gen.h

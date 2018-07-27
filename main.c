@@ -22,13 +22,15 @@ int main(int argc, char** argv)
 
     load_gen_utils();
 
+    uint64_t x = 9;
+    data("x", (uint8_t*)&x, sizeof(x));
+
     label("_start");
     {
         addi(a0, zero, 0); // argc
         addi(a1, zero, 0); // argv
         call("main");
         mov(a1, v0);
-        set_breakpoint();
         addi(a0, zero, EXIT);
         int_();
     }
@@ -98,7 +100,8 @@ int main(int argc, char** argv)
 
     label("main");
     {
-        addi(s0, zero, 0x9);
+        la(t0, "x");
+        ld(s0, t0, 0);
 
         mov(a0, s0);
         call("print");
@@ -113,6 +116,9 @@ int main(int argc, char** argv)
         call("print");
         addi(a0, zero, '\n');
         call("putc");
+
+        la(t0, "x");
+        sd(t0, s0, 0);
 
         addi(v0, zero, EXIT_SUCCESS);
         ret();

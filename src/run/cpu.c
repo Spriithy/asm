@@ -235,6 +235,8 @@ cpu_loop:
         addr = addrmap(R[RS1] + OFFSET);
         align64check(addr);
         R[RD] = *(uint64_t*)addr;
+        printf("ld > 0x%llX\n", addr);
+        printf("dat> %p\n", cpu.data);
         break;
 
     case 0x0c: /* sb %RS1, offset(%RD) */
@@ -463,7 +465,7 @@ cpu_loop:
 
     case 0x3d: /* jr $rs1 */
         show_disas();
-        setip(R[RD]);
+        setip(cpu.text + R[RD] - 1);
         break;
 
     case 0x3e: /* je $rs1, $rs2, label */
