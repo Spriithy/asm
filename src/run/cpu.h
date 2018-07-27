@@ -7,17 +7,18 @@
 
 typedef struct {
     // Base
-    uint8_t   mem[64 * 1024 * 1024];
+    uint32_t  text[0x200000];
+    uint8_t   data[0x1e00000];
     uint64_t  reg[32];
+    uint32_t* ip;
     uint64_t  hi, lo;
     uint64_t  cycles;
-    uint32_t* code;
-    uint32_t* ip;
 
     // Debug
     int    debug;
     int    step_mode;
-    char** labels;
+    char** text_syms;
+    char** data_syms;
 } cpu_t;
 
 void exec(void);

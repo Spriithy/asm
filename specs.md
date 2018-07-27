@@ -49,9 +49,9 @@ NB:
 0d sh
 0e sw
 0f sd
-10 mov
+10 mov            (P)
 11 mfhi
-12 mthi
+12 mthi           
 13 mflo
 14 mtlo   
 15 slt
@@ -71,7 +71,7 @@ NB:
 23 andi
 24 xor   
 25 xori
-26 not
+26 not           not x y = nor x y 0   (neg => not x, x add x, x, 1)
 27 nor
 28 shl
 29 shli

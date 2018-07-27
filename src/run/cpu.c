@@ -18,18 +18,26 @@
 #define FP R[30]
 #define RA R[31]
 
-#define PUSH(X) *(uint64_t*)(SP -= 8) = (X)
-#define PUSHW(X) *(uint32_t*)(SP -= 4) = (X)
-
-#define POP(X)                \
-    {                         \
-        (X) = *(uint64_t*)SP; \
-        SP += 8;              \
+#define PUSH(X)                        \
+    {                                  \
+        SP -= 8;                       \
+        *(uint64_t*)addrmap(SP) = (X); \
     }
-#define POPW(X)               \
-    {                         \
-        (X) = *(uint32_t*)SP; \
-        SP += 4;              \
+#define PUSHW(X)                       \
+    {                                  \
+        SP -= 4;                       \
+        *(uint32_t*)addrmap(SP) = (X); \
+    }
+
+#define POP(X)                         \
+    {                                  \
+        (X) = *(uint64_t*)addrmap(SP); \
+        SP += 8;                       \
+    }
+#define POPW(X)                        \
+    {                                  \
+        (X) = *(uint32_t*)addrmap(SP); \
+        SP += 4;                       \
     }
 
 #define setip(addr) cpu.ip = (uint32_t*)(addr)
@@ -39,13 +47,17 @@ cpu_t cpu;
 static void interrupt()
 {
     switch (R[4]) {
-    case 0x00: /* exit */
-        free(cpu.code);
-        exit(R[5]);
     case 0x05: /* putchar */
         putchar((int)R[5]);
         break;
+    case 0x0a: /* exit */
+        exit(R[5]);
     }
+}
+
+static uint64_t addrmap(int offset)
+{
+    return (uint64_t)cpu.text + offset;
 }
 
 static void save_frame()
@@ -54,7 +66,7 @@ static void save_frame()
     PUSH(FP);
     RA = (uint64_t)cpu.ip;
     FP = SP;
-    setip(cpu.code + I24 - 1);
+    setip(cpu.text + I24 - 1);
 
     PUSH(R[16]);
     PUSH(R[17]);
@@ -105,7 +117,7 @@ static inline void align64check(uint64_t addr)
     }
 }
 
-void hilo_umul(uint64_t rs1, uint64_t rs2)
+static void hilo_umul(uint64_t rs1, uint64_t rs2)
 {
     uint64_t u1 = (rs1 & 0xffffffff);
     uint64_t v1 = (rs2 & 0xffffffff);
@@ -126,7 +138,7 @@ void hilo_umul(uint64_t rs1, uint64_t rs2)
     cpu.lo = (t << 32) + w3;
 }
 
-void hilo_mul(int64_t rs1, int64_t rs2)
+static void hilo_mul(int64_t rs1, int64_t rs2)
 {
     hilo_umul((uint64_t)rs1, (uint64_t)rs2);
     if (rs1 < 0LL)
@@ -135,7 +147,7 @@ void hilo_mul(int64_t rs1, int64_t rs2)
         cpu.hi -= rs1;
 }
 
-void show_disas()
+static void show_disas()
 {
     if (cpu.debug)
         disasm(stdout, cpu.ip, 1);
@@ -146,12 +158,12 @@ void exec()
     uint64_t addr;
 
     cpu.cycles = 0;
-    cpu.ip = cpu.code;
-    GP = FP = SP = (uint64_t)cpu.mem + sizeof(cpu.mem);
+    cpu.ip = cpu.text;
+    GP = FP = SP = (uint64_t)(cpu.data - (uint8_t*)cpu.text) + sizeof(cpu.data);
 
 cpu_loop:
     if (cpu.debug)
-        printf("0x%-6X 0x%-10x ", (int)(cpu.ip - cpu.code), *cpu.ip);
+        printf("0x%-6X 0x%-10x ", (int)(cpu.ip - cpu.text), *cpu.ip);
 
     switch (OP) {
     case 0x00: /* nop */
@@ -175,26 +187,26 @@ cpu_loop:
 
     case 0x04: /* lb %RD, offset(%RS1) */
         show_disas();
-        addr = R[RS1] + OFFSET;
+        addr = addrmap(R[RS1] + OFFSET);
         R[RD] = *(int8_t*)addr;
         break;
 
     case 0x05: /* lbu %RD, offset(%RS1) */
         show_disas();
-        addr = R[RS1] + OFFSET;
+        addr = addrmap(R[RS1] + OFFSET);
         R[RD] = *(uint8_t*)addr;
         break;
 
     case 0x06: /* lh %RD, offset(%RS1) */
         show_disas();
-        addr = R[RS1] + OFFSET;
+        addr = addrmap(R[RS1] + OFFSET);
         align16check(addr);
         R[RD] = *(int16_t*)addr;
         break;
 
     case 0x07: /* lhu %RD, offset(%RS1) */
         show_disas();
-        addr = R[RS1] + OFFSET;
+        addr = addrmap(R[RS1] + OFFSET);
         align16check(addr);
         R[RD] = *(uint16_t*)addr;
         break;
@@ -206,48 +218,48 @@ cpu_loop:
 
     case 0x09: /* lw %RD, offset(%RS1) */
         show_disas();
-        addr = R[RS1] + OFFSET;
+        addr = addrmap(R[RS1] + OFFSET);
         align32check(addr);
         R[RD] = *(int32_t*)addr;
         break;
 
     case 0x0a: /* lwu %RD, offset(%RS1) */
         show_disas();
-        addr = R[RS1] + OFFSET;
+        addr = addrmap(R[RS1] + OFFSET);
         align32check(addr);
         R[RD] = *(uint32_t*)addr;
         break;
 
     case 0x0b: /* ld %RD, offset(%RS1) */
         show_disas();
-        addr = R[RS1] + OFFSET;
+        addr = addrmap(R[RS1] + OFFSET);
         align64check(addr);
         R[RD] = *(uint64_t*)addr;
         break;
 
     case 0x0c: /* sb %RS1, offset(%RD) */
         show_disas();
-        addr = R[RD] + OFFSET;
+        addr = addrmap(R[RD] + OFFSET);
         *(uint8_t*)addr = R[RS1] & 0xff;
         break;
 
     case 0x0d: /* sh %RS1, offset(%RD) */
         show_disas();
-        addr = R[RD] + OFFSET;
+        addr = addrmap(R[RD] + OFFSET);
         align16check(addr);
         *(uint16_t*)addr = R[RS1] & 0xffff;
         break;
 
     case 0x0e: /* sw %RS1, offset(%RD) */
         show_disas();
-        addr = R[RD] + OFFSET;
+        addr = addrmap(R[RD] + OFFSET);
         align32check(addr);
         *(uint32_t*)addr = R[RS1] & 0xffffffff;
         break;
 
     case 0x0f: /* sd %RS1, offset(%RD) */
         show_disas();
-        addr = R[RD] + OFFSET;
+        addr = addrmap(R[RD] + OFFSET);
         align64check(addr);
         *(uint64_t*)addr = R[RS1];
         break;
@@ -340,11 +352,6 @@ cpu_loop:
     case 0x25: /* xori $rd, $rs1, #imm16 */
         show_disas();
         R[RD] = R[RS1] ^ I16;
-        break;
-
-    case 0x26: /* not $rd, $rs1 */
-        show_disas();
-        R[RD] = ~R[RS1];
         break;
 
     case 0x27: /* nor $rd, $rs1, $rs2 */
@@ -451,7 +458,7 @@ cpu_loop:
 
     case 0x3c: /* j label */
         show_disas();
-        setip(cpu.code + I24 - 1);
+        setip(cpu.text + I24 - 1);
         break;
 
     case 0x3d: /* jr $rs1 */
@@ -462,13 +469,13 @@ cpu_loop:
     case 0x3e: /* je $rs1, $rs2, label */
         show_disas();
         if (R[RD] == R[RS1])
-            setip(cpu.code + I16 - 1);
+            setip(cpu.text + I16 - 1);
         break;
 
     case 0x3f: /* jne $rs1, $rs2, label */
         show_disas();
         if (R[RD] != R[RS1])
-            setip(cpu.code + I16 - 1);
+            setip(cpu.text + I16 - 1);
         break;
     }
 

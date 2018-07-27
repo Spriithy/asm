@@ -17,8 +17,8 @@ int main(int argc, char** argv)
         }
     }
 
-#define EXIT 0
-#define PRINT 5
+#define EXIT 0x0a
+#define PRINT 0x05
 
     load_gen_utils();
 
@@ -27,9 +27,9 @@ int main(int argc, char** argv)
         addi(a0, zero, 0); // argc
         addi(a1, zero, 0); // argv
         call("main");
-        mov(a0, EXIT);
         mov(a1, v0);
         set_breakpoint();
+        addi(a0, zero, EXIT);
         int_();
     }
 
@@ -56,10 +56,8 @@ int main(int argc, char** argv)
         je(t0, zero, "print.L1");
         addi(a0, zero, '-');
         call("putc"); // putc('-')
-        addi(t0, zero, 1);
-        sub(t0, zero, t0);
-        mul(s0, t0); // n = -n
-        mflo(s0);
+        nor(s0, s0, 0);
+        addi(s0, s0, 1); // n = -n
 
         label("print.L1");
         jne(s0, zero, "print.L2");
@@ -82,16 +80,16 @@ int main(int argc, char** argv)
         ret();
     }
 
-    label("ifact");
+    label("fact");
     {
         mov(s0, a0);
-        jne(s0, zero, "ifact.L1");
+        jne(s0, zero, "fact.L1");
         addi(v0, zero, 1);
         ret();
 
-        label("ifact.L1");
+        label("fact.L1");
         addi(a0, s0, -1);
-        call("ifact");
+        call("fact");
 
         mul(s0, v0);
         mflo(v0);
@@ -109,7 +107,7 @@ int main(int argc, char** argv)
         call("putc");
 
         mov(a0, s0);
-        call("ifact");
+        call("fact");
 
         mov(a0, v0);
         call("print");

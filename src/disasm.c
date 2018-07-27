@@ -264,7 +264,7 @@ void disasm(FILE* f, uint32_t* code, size_t code_size)
 
         case 0x3a: /* call label */
             if (cpu.debug)
-                fprintf(f, "call  0x%X<%s>\n", I24, cpu.labels[I24]);
+                fprintf(f, "call  0x%X<%s>\n", I24, cpu.text_syms[I24]);
             else
                 fprintf(f, "call  0x%X\n", I24);
             break;
@@ -275,28 +275,28 @@ void disasm(FILE* f, uint32_t* code, size_t code_size)
 
         case 0x3c: /* j label */
             if (cpu.debug)
-                fprintf(f, "j     0x%X<%s>\n", I24, cpu.labels[I24]);
+                fprintf(f, "j     0x%X<%s>\n", I24, cpu.text_syms[I24]);
             else
                 fprintf(f, "j     0x%X\n", I24);
             break;
 
         case 0x3d: /* jr $rs1 */
             if (cpu.debug)
-                fprintf(f, "jr    $r%d<%s>\n", RD, cpu.labels[cpu.reg[RD]]);
+                fprintf(f, "jr    $r%d<%s>\n", RD, cpu.text_syms[cpu.reg[RD]]);
             else
                 fprintf(f, "jr    $r%d\n", RD);
             break;
 
         case 0x3e: /* je $rs1, $rs2, label */
             if (cpu.debug)
-                fprintf(f, "je    $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.labels[I16]);
+                fprintf(f, "je    $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.text_syms[I16]);
             else
                 fprintf(f, "je    $r%d $r%d, 0x%X\n", RD, RS1, I16);
             break;
 
         case 0x3f: /* jne $rs1, $rs2, label */
             if (cpu.debug)
-                fprintf(f, "jne   $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.labels[I16]);
+                fprintf(f, "jne   $r%d $r%d, 0x%X<%s>\n", RD, RS1, I16, cpu.text_syms[I16]);
             else
                 fprintf(f, "jne   $r%d $r%d, 0x%X\n", RD, RS1, I16);
             break;

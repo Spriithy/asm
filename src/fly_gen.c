@@ -346,15 +346,13 @@ void jne(uint32_t rs1, uint32_t rs2, char* label)
 
 void gen()
 {
-    uint32_t* code = malloc(vector_length(asmgen.code) * sizeof(*code));
-
     if (cpu.debug) {
-        char** labels = malloc(vector_length(asmgen.code) * sizeof(*code));
+        char** labels = malloc(vector_length(asmgen.code) * sizeof(*labels));
         vector_iter(label_t, label, asmgen.labels)
         {
             labels[label->addr] = label->name;
         }
-        cpu.labels = labels;
+        cpu.text_syms = labels;
     }
 
     size_t addr = 0;
@@ -369,12 +367,12 @@ void gen()
                     switch (ir->op) {
                     case 0x3a: /* call */
                     case 0x3c: /* j */
-                        code[addr++] = I24(ir->op, label->addr);
+                        cpu.text[addr++] = I24(ir->op, label->addr);
                         break;
                     case 0x3d: /* jr */
                     case 0x3e: /* je */
                     case 0x3f: /* jne */
-                        code[addr++] = RI16(ir->op, ir->rs1, ir->rs2, label->addr);
+                        cpu.text[addr++] = RI16(ir->op, ir->rs1, ir->rs2, label->addr);
                         break;
                     default:
                         printf("unknown label-referencing instruction 0x%X\n", ir->op);
@@ -391,9 +389,7 @@ void gen()
                 asmgen.error++;
             }
         } else {
-            code[addr++] = ir->instr;
+            cpu.text[addr++] = ir->instr;
         }
     }
-
-    cpu.code = code;
 }
