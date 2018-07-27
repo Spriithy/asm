@@ -1,6 +1,8 @@
 #ifndef EMU64_H
 #define EMU64_H
 
+#define DEBUG 0
+
 #include <stdint.h>
 
 #define Mb (1024 * 1024)
@@ -22,9 +24,10 @@ typedef struct {
     uint64_t  cycles;
     uint32_t* code;
     uint32_t* ip;
-    int       debug;
-    int       step_mode;
-    char**    labels;
+#if DEBUG
+    int    step_mode;
+    char** labels;
+#endif
 } emulator_t;
 
 void exec(void);

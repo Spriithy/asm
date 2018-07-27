@@ -353,14 +353,14 @@ void gen()
 {
     uint32_t* code = malloc(vector_length(asmgen.code) * sizeof(*code));
 
-    if (emu.debug) {
-        char** labels = malloc(vector_length(asmgen.code) * sizeof(*code));
-        vector_iter(label_t, label, asmgen.labels)
-        {
-            labels[label->addr] = label->name;
-        }
-        emu.labels = labels;
+#if DEBUG
+    char** labels = malloc(vector_length(asmgen.code) * sizeof(*code));
+    vector_iter(label_t, label, asmgen.labels)
+    {
+        labels[label->addr] = label->name;
     }
+    emu.labels = labels;
+#endif
 
     size_t addr = 0;
 
@@ -376,9 +376,9 @@ void gen()
                     case 0x3c: /* j */
                         code[addr++] = I24(ir->op, label->addr);
                         break;
-                    case 0x3d:
-                    case 0x3e:
-                    case 0x3f:
+                    case 0x3d: /* jr */
+                    case 0x3e: /* je */
+                    case 0x3f: /* jne */
                         code[addr++] = RI16(ir->op, ir->rs1, ir->rs2, label->addr);
                         break;
                     default:

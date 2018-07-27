@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if DEBUG
+
 extern emulator_t emu;
 
 void breakpoint()
@@ -41,3 +43,5 @@ void breakpoint()
     str[0] = '\0';
     breakpoint();
 }
+
+#endif

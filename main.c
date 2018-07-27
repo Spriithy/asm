@@ -11,8 +11,6 @@ int main(void)
 #define EXIT 0
 #define PRINT 5
 
-    emu.debug = 0;
-
     label("_start");
     {
         addi(4, 0, 0); // argc
