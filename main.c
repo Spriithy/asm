@@ -24,8 +24,8 @@ int main(int argc, char** argv)
 
     label("_start");
     {
-        addi(a0, zero, zero); // argc
-        addi(a1, zero, zero); // argv
+        addi(a0, zero, 0); // argc
+        addi(a1, zero, 0); // argv
         call("main");
         mov(a0, v0);
         int_(EXIT);
@@ -46,7 +46,6 @@ int main(int argc, char** argv)
 
     label("print");
     {
-        set_breakpoint();
         mov(s0, a0); // n
 
         slt(t0, a0, zero); // n < zero ?
@@ -79,18 +78,18 @@ int main(int argc, char** argv)
         ret();
     }
 
-    label("rfact");
+    label("ifact");
     {
         mov(s0, a0);
-        sltiu(t0, s0, 2); // n <= 1 ?
-        je(t0, zero, "rfact.L1");
-        addi(v0, zero, 1); // return 1
+        jne(s0, zero, "ifact.L1");
+        addi(v0, zero, 1);
         ret();
-        label("rfact.L1");
-        addi(t0, zero, 1);
-        sub(a0, a0, t0);
-        call("rfact");
-        mul(s0, v0); // n * rfact(n - 1)
+
+        label("ifact.L1");
+        addi(a0, s0, -1);
+        call("ifact");
+
+        mul(s0, v0);
         mflo(v0);
         ret();
     }
@@ -102,6 +101,14 @@ int main(int argc, char** argv)
         mov(a0, s0);
         call("print");
 
+        addi(a0, zero, '\n');
+        call("putc");
+
+        mov(a0, s0);
+        call("ifact");
+
+        mov(a0, v0);
+        call("print");
         addi(a0, zero, '\n');
         call("putc");
 
