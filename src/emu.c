@@ -1,5 +1,5 @@
 #include "emu.h"
-#include "debug.h"
+#include "breakpoint.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,18 +12,18 @@
 #define PUSH(X) *(uint64_t*)(SP -= 8) = (X);
 #define PUSHW(X) *(uint32_t*)(SP -= 4) = (X);
 
-#define POP(RD)                 \
-    {                           \
-        R[RD] = *(uint64_t*)SP; \
-        SP += 8;                \
+#define POP(X)                \
+    {                         \
+        (X) = *(uint64_t*)SP; \
+        SP += 8;              \
     }
-#define POPW(RD)                \
-    {                           \
-        R[RD] = *(uint32_t*)SP; \
-        SP += 4;                \
+#define POPW(X)               \
+    {                         \
+        (X) = *(uint32_t*)SP; \
+        SP += 4;              \
     }
 
-#define setip(offs) emu.ip = emu.code + offs;
+#define setip(addr) emu.ip = (uint32_t*)(addr)
 
 emulator_t emu;
 
@@ -33,52 +33,44 @@ static void swi(uint32_t icode)
     case 0x00: /* exit */
         free(emu.code);
         exit(R[4]);
-    case 0x01: /* reg dump */
-        for (int i = 0; i < 32; i++) {
-            printf("r%-2d   0x%llX   (%llu)\n", i, R[i], R[i]);
-        }
-        break;
     case 5:
-        printf("%c", (int)R[5]);
+        putchar((int)R[4]);
         break;
     }
 }
 
 static void save_frame()
 {
-    uint64_t fp = SP;
-    PUSH(32); // ra
-    PUSH(31); // fp
-
-    FP = fp; // new frame ptr
-
-    // saved registers
-    PUSH(17);
-    PUSH(18);
-    PUSH(19);
-    PUSH(20);
-    PUSH(21);
-    PUSH(22);
-    PUSH(23);
-    PUSH(24);
-
+    PUSH(RA);
+    PUSH(FP);
     RA = (uint64_t)emu.ip;
+    FP = SP;
+    setip(emu.code + I24_imm - 1);
+
+    PUSH(R[16]);
+    PUSH(R[17]);
+    PUSH(R[18]);
+    PUSH(R[19]);
+    PUSH(R[20]);
+    PUSH(R[21]);
+    PUSH(R[22]);
+    PUSH(R[23]);
 }
 
 static void restore_frame()
 {
-    emu.ip = (uint32_t*)RA;
-    // saved registers
-    POP(23);
-    POP(22);
-    POP(21);
-    POP(20);
-    POP(19);
-    POP(18);
-    POP(17);
-    POP(16);
-    POP(30); // fp
-    POP(31); // ra
+    POP(R[23]);
+    POP(R[22]);
+    POP(R[21]);
+    POP(R[20]);
+    POP(R[19]);
+    POP(R[18]);
+    POP(R[17]);
+    POP(R[16]);
+
+    setip(RA);
+    POP(FP);
+    POP(RA);
 }
 
 static inline void align16check(uint64_t addr)
@@ -137,13 +129,14 @@ void hilo_mul(int64_t rs1, int64_t rs2)
 void exec()
 {
     uint64_t addr;
+
     emu.cycles = 0;
     emu.ip = emu.code;
-    SP = (uint64_t)emu.mem + sizeof(emu.mem);
+    GP = FP = SP = (uint64_t)emu.mem + sizeof(emu.mem);
 
 cpu_loop:
     if (emu.debug)
-        printf("%p 0x%-10x ", emu.ip, *emu.ip);
+        printf("0x%-6X 0x%-10x ", (int)(emu.ip - emu.code), *emu.ip);
 
     switch (OP) {
     case 0x00: /* nop */
@@ -163,10 +156,15 @@ cpu_loop:
         swi(R[RS1]);
         break;
 
-    case 0x03: /* brkpt */
-        if (emu.debug)
-            printf("brkpt\n");
-        breakpoint();
+    case 0x03: /* breakpoint */
+        if (emu.debug) {
+            printf("breakpoint\n");
+            breakpoint();
+
+            emu.ip++, emu.cycles++;
+            R[0] = 0x0; // $r0 is hard wired to 0
+            goto cpu_loop;
+        }
         break;
 
     case 0x04: /* lb %RD, offset(%RS1) */
@@ -519,20 +517,19 @@ cpu_loop:
     case 0x38: /* popw $rd */
         if (emu.debug)
             printf("popw  $r%d\n", RD);
-        POPW(RD);
+        POPW(R[RD]);
         break;
 
     case 0x39: /* pop $rd */
         if (emu.debug)
             printf("pop   $r%d\n", RD);
-        POP(RD);
+        POP(R[RD]);
         break;
 
     case 0x3a: /* call label */
         if (emu.debug)
-            printf("call  0x%X\n", I24_imm);
+            printf("call  0x%X<%s>\n", I24_imm, emu.labels[I24_imm]);
         save_frame();
-        setip(I24_imm - 1);
         break;
 
     case 0x3b: /* ret */
@@ -543,31 +540,38 @@ cpu_loop:
 
     case 0x3c: /* j label */
         if (emu.debug)
-            printf("j     0x%X\n", I24_imm);
-        setip(I24_imm - 1);
+            printf("j     0x%X<%s>\n", I24_imm, emu.labels[I24_imm]);
+        setip(emu.code + I24_imm - 1);
         break;
 
     case 0x3d: /* jr $rs1 */
         if (emu.debug)
-            printf("jr    $r%d\n", RS1);
-        setip(R[RS1]);
+            printf("jr    $r%d<%s>\n", RD, emu.labels[R[RD]]);
+        setip(R[RD]);
         break;
 
     case 0x3e: /* je $rs1, $rs2, label */
         if (emu.debug)
-            printf("je    $r%d $r%d, 0x%X\n", RS1, RS2, RI16_imm);
-        if (R[RS1] == R[RS2])
-            setip(RI16_imm - 1);
+            printf("je    $r%d $r%d, 0x%X<%s>\n", RD, RS1, RI16_imm, emu.labels[RI16_imm]);
+        if (R[RD] == R[RS1])
+            setip(emu.code + RI16_imm - 1);
         break;
 
     case 0x3f: /* jne $rs1, $rs2, label */
         if (emu.debug)
-            printf("je    $r%d $r%d, 0x%X\n", RS1, RS2, RI16_imm);
-        if (R[RS1] != R[RS2])
-            setip(RI16_imm - 1);
+            printf("jne   $r%d $r%d, 0x%X<%s>\n", RD, RS1, RI16_imm, emu.labels[RI16_imm]);
+        if (R[RD] != R[RS1])
+            setip(emu.code + RI16_imm - 1);
         break;
     }
+
     emu.ip++, emu.cycles++;
     R[0] = 0x0; // $r0 is hard wired to 0
+
+    if (emu.step_mode) {
+        emu.step_mode = 0;
+        breakpoint();
+    }
+
     goto cpu_loop;
 }

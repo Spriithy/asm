@@ -23,6 +23,8 @@ typedef struct {
     uint32_t* code;
     uint32_t* ip;
     int       debug;
+    int       step_mode;
+    char**    labels;
 } emulator_t;
 
 void exec(void);
