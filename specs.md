@@ -2,26 +2,17 @@
 
   Register       Name       Desc.              Saved
 ------------------------------------------------------
-  x0             zero       always zero          —
-  x1             ra         return address     Caller
-  x2             sp         stack pointer      Callee
-  x3             gp         global pointer       —
-  x4             tp         thread pointer       —
-  x5-7           t0-2       temporaries        Caller
-  x8             s0/fp      frame pointer      Callee
-  x9             s1         saved reg.         Callee
-  x10-11         a0-1       f. args/ret        Caller
-  x12-17         a2-7       f. args            Caller
-  x18-27         s2-11      saved regs.        Callee
-  x28-31         t3-6       temporaries        Caller
-------------------------------------------------------
-  f0-7           ft0-7      FP temporaries     Caller
-  f8-9           fs0-1      FP saved regs.     Callee
-  f10-11         fa0-1      FP args/ret        Caller
-  f12-17         fa2-7      FP args            Caller
-  f18-27         fs2-11     FP saved regs.     Callee
-  f28-f31        ft8-11     FP temporaries     Caller
-
+  r0             zero       always zero          —
+  r1             at0        asm-temp             —
+  r2-3           v0-1       return values        —
+  r4-7           a0-3       call args            —
+  r8-15,24,25    t0-9       temps                —
+  r16-23         s0-7       saved regs          Yes 
+  r26-27         at1-2      asm-temp             —
+  r28            gp         global ptr          Yes
+  r29            sp         stack ptr           Yes
+  r30            fp         frame ptr           Yes
+  r31            ra         return addr         Yes
 
   Name        Size (bytes)
 ----------------------------
@@ -30,7 +21,7 @@
   int              4
   long             4
   long long        8
-  void*            4
+  void*            8
   float            4
   double           8
   long double     16
@@ -39,47 +30,13 @@ NB:
   - char / unsigned short    0 extended in registers
   - signed char / short      sign extended
 
-
-# Instruction Set
-
-opcode = I & 0x7f
-rd     = (I >> 7) & 0x1f
-
-* R-type
-
-                 28 27     22 21   16 15    11 10         3 2     0
- +------------+----+---------+-------+--------+------------+------+
- | funct7          |   rs2   |  rs1  |   rd   |   opcode   | size |
- +------------+----+---------+-------+--------+------------+------+
-
-* I-type
-
-  31                  20 19     15 14  12 11      7 6           0
- +----------------------+---------+------+---------+-------------+
- | imm                  | rs1     |funct3| rd      | opcode      |
- +----------------------+---------+------+---------+-------------+
-
-* S-type
-
-  31        25 24     20 19     15 14  12 11      7 6           0
- +------------+---------+---------+------+---------+-------------+
- | imm        | rs2     | rs1     |funct3| imm     | opcode      |
- +------------+---------+---------+------+---------+-------------+
-
-* U-type
-
-  31                                      11      7 6           0
- +---------------------------------------+---------+-------------+
- | imm                                   | rd      | opcode      |
- +---------------------------------------+---------+-------------+
-
- Listing
+  Instructions Listing
 --------------------------------------------------------------------------------
 
 00  —              —
 01 int             interupt
 02 intr            interupt reg.
-03 brkpt           breakpoint
+03 breakpoint
 04 lb
 05 lbu
 06 lh
@@ -135,7 +92,7 @@ rd     = (I >> 7) & 0x1f
 38 popw
 39 pop
 3a call
-3b callr
+3b ret
 3c j
 3d jr
 3e je
