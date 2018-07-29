@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include "../disasm.h"
+#include "../maths.h"
 #include "breakpoint.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,33 +19,9 @@
 #define FP R[30]
 #define RA R[31]
 
-#define PUSH(X)                        \
-    {                                  \
-        SP -= 8;                       \
-        *(uint64_t*)addrmap(SP) = (X); \
-    }
-#define PUSHW(X)                       \
-    {                                  \
-        SP -= 4;                       \
-        *(uint32_t*)addrmap(SP) = (X); \
-    }
-
-#define POP(X)                         \
-    {                                  \
-        (X) = *(uint64_t*)addrmap(SP); \
-        SP += 8;                       \
-    }
-#define POPW(X)                        \
-    {                                  \
-        (X) = *(uint32_t*)addrmap(SP); \
-        SP += 4;                       \
-    }
-
-#define setip(addr) cpu.ip = (uint32_t*)(addr)
-
 cpu_t cpu;
 
-static void interrupt()
+static inline void interrupt()
 {
     switch (R[4]) {
     case 0x05: /* putchar */
@@ -55,76 +32,77 @@ static void interrupt()
     }
 }
 
-static uint64_t addrmap(int offset)
+static inline void set_ip(void* addr)
+{
+    cpu.ip = (uint32_t*)(addr);
+}
+
+static inline uint64_t addrmap(int offset)
 {
     return (uint64_t)cpu.text + offset;
 }
 
-static void save_frame()
+static inline void push(uint64_t val)
 {
-    PUSH(RA);
-    PUSH(FP);
+    SP -= 8;
+    *(uint64_t*)addrmap(SP) = val;
+}
+
+static inline void pushw(uint32_t val)
+{
+    SP -= 4;
+    *(uint64_t*)addrmap(SP) = val;
+}
+
+static inline void pop(uint64_t* reg)
+
+{
+    *reg = *(uint64_t*)addrmap(SP);
+    SP += 8;
+}
+
+static inline void popw(uint64_t* reg)
+
+{
+    *reg = *(uint64_t*)addrmap(SP);
+    SP += 4;
+}
+
+static inline void save_frame()
+{
+    push(RA);
+    push(FP);
     RA = (uint64_t)cpu.ip;
     FP = SP;
-    setip(cpu.text + I24 - 1);
+    set_ip(cpu.text + I24 - 1);
 
-    PUSH(R[16]);
-    PUSH(R[17]);
-    PUSH(R[18]);
-    PUSH(R[19]);
-    PUSH(R[20]);
-    PUSH(R[21]);
-    PUSH(R[22]);
-    PUSH(R[23]);
+    push(R[16]);
+    push(R[17]);
+    push(R[18]);
+    push(R[19]);
+    push(R[20]);
+    push(R[21]);
+    push(R[22]);
+    push(R[23]);
 }
 
-static void restore_frame()
+static inline void restore_frame()
 {
-    POP(R[23]);
-    POP(R[22]);
-    POP(R[21]);
-    POP(R[20]);
-    POP(R[19]);
-    POP(R[18]);
-    POP(R[17]);
-    POP(R[16]);
+    pop(&R[23]);
+    pop(&R[22]);
+    pop(&R[21]);
+    pop(&R[20]);
+    pop(&R[19]);
+    pop(&R[18]);
+    pop(&R[17]);
+    pop(&R[16]);
 
-    setip(RA);
-    POP(FP);
-    POP(RA);
+    set_ip((void*)RA);
+    pop(&FP);
+    pop(&RA);
 }
 
-static void hilo_umul(uint64_t rs1, uint64_t rs2)
-{
-    uint64_t u1 = (rs1 & 0xffffffff);
-    uint64_t v1 = (rs2 & 0xffffffff);
-    uint64_t t = (u1 * v1);
-    uint64_t w3 = (t & 0xffffffff);
-    uint64_t k = (t >> 32);
-
-    rs1 >>= 32;
-    t = (rs1 * v1) + k;
-    k = (t & 0xffffffff);
-    uint64_t w1 = (t >> 32);
-
-    rs2 >>= 32;
-    t = (u1 * rs2) + k;
-    k = (t >> 32);
-
-    cpu.hi = (rs1 * rs2) + w1 + k;
-    cpu.lo = (t << 32) + w3;
-}
-
-static void hilo_mul(int64_t rs1, int64_t rs2)
-{
-    hilo_umul((uint64_t)rs1, (uint64_t)rs2);
-    if (rs1 < 0LL)
-        cpu.hi -= rs2;
-    if (rs2 < 0LL)
-        cpu.hi -= rs1;
-}
-
-static void show_disas()
+static inline void show_disas()
 {
     if (cpu.debug)
         disasm(stdout, cpu.ip, 1);
@@ -375,12 +353,12 @@ cpu_loop:
 
     case 0x31: /* mul $rs1, $rs2 */
         show_disas();
-        hilo_mul(R[RS1], R[RS2]);
+        mult64to128(R[RS1], R[RS2], &cpu.hi, &cpu.lo, 0);
         break;
 
     case 0x32: /* mulu $rs1, $rs2 */
         show_disas();
-        hilo_umul(R[RS1], R[RS2]);
+        mult64to128(R[RS1], R[RS2], &cpu.hi, &cpu.lo, 1);
         break;
 
     case 0x33: /* div $rs1, $rs2 */
@@ -397,22 +375,22 @@ cpu_loop:
 
     case 0x36: /* pushw $rd */
         show_disas();
-        PUSHW(R[RS1]);
+        pushw(R[RS1]);
         break;
 
     case 0x37: /* push $rs1 */
         show_disas();
-        PUSH(R[RS1]);
+        push(R[RS1]);
         break;
 
     case 0x38: /* popw $rd */
         show_disas();
-        POPW(R[RD]);
+        popw(&R[RD]);
         break;
 
     case 0x39: /* pop $rd */
         show_disas();
-        POP(R[RD]);
+        pop(&R[RD]);
         break;
 
     case 0x3a: /* call label */
@@ -427,24 +405,24 @@ cpu_loop:
 
     case 0x3c: /* j label */
         show_disas();
-        setip(cpu.text + I24 - 1);
+        set_ip(cpu.text + I24 - 1);
         break;
 
     case 0x3d: /* jr $rs1 */
         show_disas();
-        setip(cpu.text + R[RD] - 1);
+        set_ip(cpu.text + R[RD] - 1);
         break;
 
     case 0x3e: /* je $rs1, $rs2, label */
         show_disas();
         if (R[RD] == R[RS1])
-            setip(cpu.text + I16 - 1);
+            set_ip(cpu.text + I16 - 1);
         break;
 
     case 0x3f: /* jne $rs1, $rs2, label */
         show_disas();
         if (R[RD] != R[RS1])
-            setip(cpu.text + I16 - 1);
+            set_ip(cpu.text + I16 - 1);
         break;
     }
 
