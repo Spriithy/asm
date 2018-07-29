@@ -94,29 +94,6 @@ static void restore_frame()
     POP(RA);
 }
 
-static inline void align16check(uint64_t addr)
-{
-    if (addr & 0x1) {
-        puts("Address error: 16-bit address is not aligned");
-        exit(1);
-    }
-}
-
-static inline void align32check(uint64_t addr)
-{
-    if (addr & 0x3) {
-        puts("Address error: 32-bit address is not aligned");
-        exit(1);
-    }
-}
-static inline void align64check(uint64_t addr)
-{
-    if (addr & 0x7) {
-        puts("Address error: 64-bit address is not aligned");
-        exit(1);
-    }
-}
-
 static void hilo_umul(uint64_t rs1, uint64_t rs2)
 {
     uint64_t u1 = (rs1 & 0xffffffff);
@@ -200,14 +177,12 @@ cpu_loop:
     case 0x06: /* lh %RD, offset(%RS1) */
         show_disas();
         addr = addrmap(R[RS1] + OFFSET);
-        align16check(addr);
         R[RD] = *(int16_t*)addr;
         break;
 
     case 0x07: /* lhu %RD, offset(%RS1) */
         show_disas();
         addr = addrmap(R[RS1] + OFFSET);
-        align16check(addr);
         R[RD] = *(uint16_t*)addr;
         break;
 
@@ -219,24 +194,19 @@ cpu_loop:
     case 0x09: /* lw %RD, offset(%RS1) */
         show_disas();
         addr = addrmap(R[RS1] + OFFSET);
-        align32check(addr);
         R[RD] = *(int32_t*)addr;
         break;
 
     case 0x0a: /* lwu %RD, offset(%RS1) */
         show_disas();
         addr = addrmap(R[RS1] + OFFSET);
-        align32check(addr);
         R[RD] = *(uint32_t*)addr;
         break;
 
     case 0x0b: /* ld %RD, offset(%RS1) */
         show_disas();
         addr = addrmap(R[RS1] + OFFSET);
-        align64check(addr);
         R[RD] = *(uint64_t*)addr;
-        printf("ld > 0x%llX\n", addr);
-        printf("dat> %p\n", cpu.data);
         break;
 
     case 0x0c: /* sb %RS1, offset(%RD) */
@@ -248,21 +218,18 @@ cpu_loop:
     case 0x0d: /* sh %RS1, offset(%RD) */
         show_disas();
         addr = addrmap(R[RD] + OFFSET);
-        align16check(addr);
         *(uint16_t*)addr = R[RS1] & 0xffff;
         break;
 
     case 0x0e: /* sw %RS1, offset(%RD) */
         show_disas();
         addr = addrmap(R[RD] + OFFSET);
-        align32check(addr);
         *(uint32_t*)addr = R[RS1] & 0xffffffff;
         break;
 
     case 0x0f: /* sd %RS1, offset(%RD) */
         show_disas();
         addr = addrmap(R[RD] + OFFSET);
-        align64check(addr);
         *(uint64_t*)addr = R[RS1];
         break;
 

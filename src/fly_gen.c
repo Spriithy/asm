@@ -75,13 +75,8 @@ void data(char* name, uint8_t* data, size_t data_size)
         }
     }
 
-    size_t offset = asmgen.data_offset + data_size & 7 ? (data_size + 7) & 8 : 0;
-
-    if (data_size & 0x7) {
-        asmgen.data_offset += (data_size + 7) & 8; // align to double word size
-    }
-
-    vector_push(asmgen.data_syms, (datasym_t){ { name, offset }, data, data_size });
+    asmgen.data_offset += data_size;
+    vector_push(asmgen.data_syms, (datasym_t){ { name, asmgen.data_offset - data_size }, data, data_size });
 }
 
 void nop(void)

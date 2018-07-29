@@ -22,8 +22,9 @@ int main(int argc, char** argv)
 
     load_gen_utils();
 
-    uint64_t x = 9;
+    uint64_t x = 9, y = 10;
     data("x", (uint8_t*)&x, sizeof(x));
+    data("y", (uint8_t*)&y, sizeof(y));
 
     label("_start");
     {
@@ -98,7 +99,7 @@ int main(int argc, char** argv)
 
     label("main");
     {
-        la(t0, "x");
+        la(t0, "y");
         ld(s0, t0, 0);
 
         mov(a0, s0);
