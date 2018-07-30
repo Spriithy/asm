@@ -418,7 +418,6 @@ void gen()
         {
             data_syms[sym->sym.addr] = sym->sym.name;
         }
-        cpu.data_syms = data_syms;
     }
 
     size_t addr = 0;

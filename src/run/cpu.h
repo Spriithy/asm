@@ -18,7 +18,6 @@ typedef struct {
     int    debug;
     int    step_mode;
     char** text_syms;
-    char** data_syms;
 } cpu_t;
 
 void exec(void);
