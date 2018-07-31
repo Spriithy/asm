@@ -3,13 +3,13 @@
 
 #include <stddef.h>
 
-const char* intern(const char* str);
-const char* intern_len(const char* str, size_t len);
-const char* intern_range(const char* start, const char* end);
+char* intern(char* str);
+char* intern_len(char* str, size_t len);
+char* intern_range(char* start, char* end);
 
-const char* interned(char* str);
-const char* interned_len(char* str, size_t len);
-const char* interned_range(char* start, char* end);
+char* interned(char* str);
+char* interned_len(char* str, size_t len);
+char* interned_range(char* start, char* end);
 
 void free_interns();
 

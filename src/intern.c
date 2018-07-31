@@ -4,18 +4,18 @@
 #include <string.h>
 
 struct intern {
-    size_t      len;
-    const char* str;
+    size_t len;
+    char*  str;
 };
 
 static struct intern* interns;
 
-const char* intern(const char* str)
+char* intern(char* str)
 {
     return intern_len(str, strlen(str));
 }
 
-const char* intern_len(const char* start, size_t len)
+char* intern_len(char* start, size_t len)
 {
     if (len == 0) {
         return intern("");
@@ -36,13 +36,13 @@ const char* intern_len(const char* start, size_t len)
     return str;
 }
 
-const char* intern_range(const char* start, const char* end)
+char* intern_range(char* start, char* end)
 {
     return intern_len(start, end - start);
 }
 
 /* O(n) best case, O(n^2 + n) worst case */
-const char* interned(char* str)
+char* interned(char* str)
 {
     size_t len = strlen(str);
 
@@ -63,7 +63,7 @@ const char* interned(char* str)
     return NULL;
 }
 
-const char* interned_len(char* start, size_t len)
+char* interned_len(char* start, size_t len)
 {
     char str[len + 1];
 
@@ -73,7 +73,7 @@ const char* interned_len(char* start, size_t len)
     return interned(str);
 }
 
-const char* interned_range(char* start, char* end)
+char* interned_range(char* start, char* end)
 {
     return interned_len(start, end - start);
 }
