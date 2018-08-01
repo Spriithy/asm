@@ -1,5 +1,5 @@
-#ifndef EMU64_TOKEN_H
-#define EMU64_TOKEN_H
+#ifndef EMU64_COMPILER_TOKEN_H
+#define EMU64_COMPILER_TOKEN_H
 
 #include <stddef.h>
 #include <stdint.h>

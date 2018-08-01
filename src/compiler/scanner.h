@@ -1,5 +1,5 @@
-#ifndef EMU64_SCANNER_H
-#define EMU64_SCANNER_H
+#ifndef EMU64_COMPILER_SCANNER_H
+#define EMU64_COMPILER_SCANNER_H
 
 #include "../error.h"
 #include "token.h"
@@ -18,8 +18,8 @@ typedef struct {
     error_t** err_list;
 } scanner_t;
 
-void scanner_init(char* file_name);
-void scanner_delete();
-void scanner_tok();
+scanner_t* scanner_init(char* file_name);
+void       scanner_delete(scanner_t* scan);
+void       scanner_tok(scanner_t* scan);
 
 #endif // scanner.h

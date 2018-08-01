@@ -1,4 +1,4 @@
-#include "src/comp/scanner.h"
+#include "src/compiler/scanner.h"
 #include "src/error.h"
 #include "src/intern.h"
 #include "src/jit.h"
@@ -27,28 +27,28 @@ int main(int argc, char** argv)
     }
 
     if (in_file != NULL) {
-        scanner_init(in_file);
-        scanner_tok();
-        while (scan.tok->kind != TOK_EOF) {
-            char* str = tok_str(scan.tok);
+        scanner_t* scan = scanner_init(in_file);
+        scanner_tok(scan);
+        while (scan->tok->kind != TOK_EOF) {
+            char* str = tok_str(scan->tok);
             printf("%s\n", str);
-            free(scan.tok);
+            free(scan->tok);
             free(str);
-            scanner_tok();
+            scanner_tok(scan);
         }
-        char* str = tok_str(scan.tok);
+        char* str = tok_str(scan->tok);
         printf("%s\n", str);
-        free(scan.tok);
+        free(scan->tok);
         free(str);
 
-        if (scan.err_list != NULL) {
-            vector_iter(error_t*, err, scan.err_list)
+        if (scan->err_list != NULL) {
+            vector_iter(error_t*, err, scan->err_list)
             {
                 printf("%s\n", *err);
             }
         }
 
-        scanner_delete();
+        scanner_delete(scan);
     } else {
         printf("error: no input file\n");
         exit(-1);
