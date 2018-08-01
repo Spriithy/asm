@@ -31,7 +31,7 @@ typedef struct {
     size_t     error;
 } jit_t;
 
-void jit_run();
+void jit_run(int debug);
 
 void jit_data(char* name, uint8_t* data, size_t data_size);
 void jit_label(char* name);

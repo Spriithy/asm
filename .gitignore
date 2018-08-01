@@ -1,3 +1,5 @@
 emu-32*
 emu-64*
 .vscode
+*/**.o
+*.o

@@ -103,10 +103,10 @@ static inline void restore_frame(cpu_t* cpu)
 static inline void show_disas(cpu_t* cpu)
 {
     if (cpu->debug)
-        disasm(stdout, cpu->ip, 1);
+        disasm(cpu, stdout, cpu->ip, 1);
 }
 
-void exec(cpu_t* cpu)
+void cpu_exec(cpu_t* cpu)
 {
     uint64_t addr;
 
@@ -429,7 +429,7 @@ cpu_loop:
 
     if (cpu->debug && cpu->step_mode) {
         cpu->step_mode = 0;
-        breakpoint();
+        breakpoint(cpu);
     }
 
     goto cpu_loop;

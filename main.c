@@ -8,19 +8,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern cpu_t     cpu;
 extern jit_t     jit;
 extern scanner_t scan;
 
 int main(int argc, char** argv)
 {
-    cpu.debug = 0;
+    int   debug = 0;
     char* in_file = NULL;
 
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
-                cpu.debug = 1;
+                debug = 1;
             } else {
                 in_file = argv[i];
             }
