@@ -1,7 +1,6 @@
 #ifndef EMU64_H
 #define EMU64_H
 
-#include "../common.h"
 #include "../decode.h"
 #include <stdint.h>
 
@@ -20,6 +19,6 @@ typedef struct {
     char** text_syms;
 } cpu_t;
 
-void exec(void);
+void cpu_exec(cpu_t* cpu);
 
 #endif // cpu.h

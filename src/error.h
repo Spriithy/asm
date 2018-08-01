@@ -3,9 +3,7 @@
 
 #include <stdarg.h>
 
-typedef struct {
-    char* message;
-} error_t;
+typedef char error_t;
 
 error_t* errorf(char* fmt, ...);
 void     error_free(error_t** err);

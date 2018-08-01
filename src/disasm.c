@@ -1,9 +1,7 @@
 #include "disasm.h"
-#include "common.h"
 #include "decode.h"
 #include "run/cpu.h"
-
-extern cpu_t cpu;
+#include <string.h>
 
 #define OP DECODE_OP(code[i])
 #define RD DECODE_RD(code[i])
@@ -13,7 +11,7 @@ extern cpu_t cpu;
 #define I16 DECODE_I16(code[i])
 #define I24 DECODE_I24(code[i])
 
-char* reg_name(int r)
+char* reg_name(int reg)
 {
     static char* names[] = {
         [0] = "%zero",
@@ -49,10 +47,80 @@ char* reg_name(int r)
         [30] = "%fp",
         [31] = "%ra",
     };
-    return names[r];
+    return names[reg];
 }
 
-void disasm(FILE* f, uint32_t* code, size_t code_size)
+int reg_index(char* reg)
+{
+    if (strcmp(reg, "%zero") == 0)
+        return 0;
+    if (strcmp(reg, "%at") == 0)
+        return 1;
+    if (strcmp(reg, "%v0") == 0)
+        return 2;
+    if (strcmp(reg, "%v1") == 0)
+        return 3;
+    if (strcmp(reg, "%a0") == 0)
+        return 4;
+    if (strcmp(reg, "%a1") == 0)
+        return 5;
+    if (strcmp(reg, "%a2") == 0)
+        return 6;
+    if (strcmp(reg, "%a3") == 0)
+        return 7;
+    if (strcmp(reg, "%t0") == 0)
+        return 8;
+    if (strcmp(reg, "%t1") == 0)
+        return 9;
+    if (strcmp(reg, "%t2") == 0)
+        return 10;
+    if (strcmp(reg, "%t3") == 0)
+        return 11;
+    if (strcmp(reg, "%t4") == 0)
+        return 12;
+    if (strcmp(reg, "%t5") == 0)
+        return 13;
+    if (strcmp(reg, "%t6") == 0)
+        return 14;
+    if (strcmp(reg, "%t7") == 0)
+        return 15;
+    if (strcmp(reg, "%s0") == 0)
+        return 16;
+    if (strcmp(reg, "%s1") == 0)
+        return 17;
+    if (strcmp(reg, "%s2") == 0)
+        return 18;
+    if (strcmp(reg, "%s3") == 0)
+        return 19;
+    if (strcmp(reg, "%s4") == 0)
+        return 20;
+    if (strcmp(reg, "%s5") == 0)
+        return 21;
+    if (strcmp(reg, "%s6") == 0)
+        return 22;
+    if (strcmp(reg, "%s7") == 0)
+        return 23;
+    if (strcmp(reg, "%s8") == 0)
+        return 24;
+    if (strcmp(reg, "%s9") == 0)
+        return 25;
+    if (strcmp(reg, "%k0") == 0)
+        return 26;
+    if (strcmp(reg, "%k1") == 0)
+        return 27;
+    if (strcmp(reg, "%gp") == 0)
+        return 28;
+    if (strcmp(reg, "%sp") == 0)
+        return 29;
+    if (strcmp(reg, "%fp") == 0)
+        return 30;
+    if (strcmp(reg, "%ra") == 0)
+        return 31;
+
+    return -1;
+}
+
+void disasm(cpu_t* cpu, FILE* f, uint32_t* code, size_t code_size)
 {
     if (code_size == 0) {
         return;
@@ -269,8 +337,8 @@ void disasm(FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3a: /* call label */
-            if (cpu.debug)
-                fprintf(f, "call  0x%X<%s>\n", I24, cpu.text_syms[I24]);
+            if (cpu->debug)
+                fprintf(f, "call  0x%X<%s>\n", I24, cpu->text_syms[I24]);
             else
                 fprintf(f, "call  0x%X\n", I24);
             break;
@@ -280,29 +348,29 @@ void disasm(FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3c: /* j label */
-            if (cpu.debug)
-                fprintf(f, "j     0x%X<%s>\n", I24, cpu.text_syms[I24]);
+            if (cpu->debug)
+                fprintf(f, "j     0x%X<%s>\n", I24, cpu->text_syms[I24]);
             else
                 fprintf(f, "j     0x%X\n", I24);
             break;
 
         case 0x3d: /* jr %rs1 */
-            if (cpu.debug)
+            if (cpu->debug)
                 fprintf(f, "jr    %s\n", reg_name(RD));
             else
                 fprintf(f, "jr    %s\n", reg_name(RD));
             break;
 
         case 0x3e: /* je %reg_name(RS1), %reg_name(RS2), label */
-            if (cpu.debug)
-                fprintf(f, "je    %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu.text_syms[I16]);
+            if (cpu->debug)
+                fprintf(f, "je    %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu->text_syms[I16]);
             else
                 fprintf(f, "je    %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
         case 0x3f: /* jne %reg_name(RS1), %reg_name(RS2), label */
-            if (cpu.debug)
-                fprintf(f, "jne   %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu.text_syms[I16]);
+            if (cpu->debug)
+                fprintf(f, "jne   %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu->text_syms[I16]);
             else
                 fprintf(f, "jne   %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
