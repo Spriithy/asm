@@ -230,11 +230,30 @@ static void scan_reg()
     scan.tok->int_val = reg - 1;
 }
 
+static void discard_spaces()
+{
+    while (fmatch(isspace)) {
+    }
+}
+
+static int comment()
+{
+    int b = 0;
+    discard_spaces();
+    if (match(';')) {
+        while (!match('\n')) {
+            fwd();
+        }
+        b = 1;
+    }
+    return b;
+}
+
 void scanner_tok()
 {
     scan.tok = NULL;
 
-    while (fmatch(isspace)) {
+    while (comment()) {
     }
 
     make_tok();

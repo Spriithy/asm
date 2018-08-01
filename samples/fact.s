@@ -1,4 +1,4 @@
-fact:   mov  %s0, %a0
+fact:   mov  %s0, %a0             ; factorial function
         jne  %s0, %zero, fact.L1
         addi %v0, %zero, 1
         ret
