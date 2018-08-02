@@ -25,6 +25,16 @@
 static jit_t jit;
 static cpu_t cpu;
 
+#define jit_errorf(fmt, ...)                                                    \
+    {                                                                           \
+        char*       sfmt;                                                       \
+        static char buf[1024];                                                  \
+        asprintf(&sfmt, "error :: jit(%zu): %s", vector_length(jit.code), fmt); \
+        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                        \
+        printf("%s\n", buf);                                                    \
+        free(sfmt);                                                             \
+    }
+
 void jit_rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off)
 {
     vector_push(jit.code, (instr_t){ 0, 0, 0, RR(op, rd, rs1, rs2, off), NULL });
@@ -45,7 +55,7 @@ void jit_label(char* name)
     vector_iter(label_t, label, jit.labels)
     {
         if (strcmp(name, label->name) == 0) {
-            printf("label redefinition: '%s'. Previous definition was here 0x%X\n", label->name, label->addr);
+            jit_errorf("label redefinition: '%s'. Previous definition was here 0x%X\n", label->name, label->addr);
             jit.error++;
             return;
         }
@@ -54,7 +64,7 @@ void jit_label(char* name)
     vector_iter(datasym_t, sym, jit.data_syms)
     {
         if (strcmp(name, sym->sym.name) == 0) {
-            printf("definition of label '%s' ovejit_rrides previous data symbol declaration here 0x%X\n", sym->sym.name, sym->sym.addr);
+            jit_errorf("definition of label '%s' ovejit_rrides previous data symbol declaration here 0x%X\n", sym->sym.name, sym->sym.addr);
             jit.error++;
             return;
         }
@@ -68,7 +78,7 @@ void jit_data(char* name, uint8_t* data, size_t data_size)
     vector_iter(datasym_t, sym, jit.data_syms)
     {
         if (strcmp(name, sym->sym.name) == 0) {
-            printf("data symbol redefinition: '%s'. Previous definition was here 0x%X\n", sym->sym.name, sym->sym.addr);
+            jit_errorf("data symbol redefinition: '%s'. Previous definition was here 0x%X\n", sym->sym.name, sym->sym.addr);
             jit.error++;
             return;
         }
@@ -461,7 +471,7 @@ void jit_run(int debug)
                         cpu.text[addr++] = RI16(0x21, ir->rs1, at, mapped);
                         break;
                     default:
-                        printf("unknown symbol '%s' referenced in instruction 0x%X\n", ir->label, ir->op);
+                        jit_errorf("unknown symbol '%s' referenced in instruction 0x%X\n", ir->label, ir->op);
                         jit.error++;
                     }
 
@@ -484,7 +494,7 @@ void jit_run(int debug)
             }
 
             if (!found) {
-                printf("reference to undefined symbol '%s'\n", ir->label);
+                jit_errorf("reference to undefined symbol '%s'\n", ir->label);
                 jit.error++;
             }
         } else {

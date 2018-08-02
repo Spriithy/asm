@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     if (in_file != NULL) {
         parser_t* pars = parser_init(in_file);
         parse(pars);
-        //parser_delete(pars);
+        parser_delete(pars);
         jit_run(debug);
     } else {
         printf("error: no input file\n");

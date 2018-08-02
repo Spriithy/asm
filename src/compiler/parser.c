@@ -235,7 +235,6 @@ void __parse_instr(parser_t* pars, char* name)
         }
         expect(TOK_INT);
         imm *= ival();
-        printf("%s imm=%d\n", name, imm);
         jit_ri16(op, rd, rs1, imm);
     } else if (name_is(call) || name_is(j)) {
         op = instr_opcode(name);
