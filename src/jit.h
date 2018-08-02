@@ -33,6 +33,10 @@ typedef struct {
 
 void jit_run(int debug);
 
+void jit_rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off);
+void jit_ri16(uint32_t op, uint32_t rd, uint32_t rs1, int16_t imm16);
+void jit_jump(uint32_t op, uint32_t rs1, uint32_t rs2, char* label);
+
 void jit_data(char* name, uint8_t* data, size_t data_size);
 void jit_label(char* name);
 
@@ -107,8 +111,8 @@ void jit_jne(uint32_t rs1, uint32_t rs2, char* label);
     int a0 = 4, a1 = 5, a2 = 6, a3 = 7;                                                         \
     int t0 = 8, t1 = 9, t2 = 10, t3 = 11, t4 = 12, t5 = 13, t6 = 14, t7 = 15, t8 = 24, t9 = 25; \
     int s0 = 16, s1 = 17, s2 = 18, s3 = 19, s4 = 20, s5 = 21, s6 = 22, s7 = 23;                 \
-    int gp = 28, sp = 29, fp = 30;                                                              \
     int k0 = 26, k1 = 27;                                                                       \
+    int gp = 28, sp = 29, fp = 30;                                                              \
     int ra = 31
 
 #endif // jit.h

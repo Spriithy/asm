@@ -299,73 +299,73 @@ cpu_loop:
         R[RD] = R[RS1] ^ I16;
         break;
 
-    case 0x27: /* nor $rd, $rs1, $rs2 */
+    case 0x26: /* nor $rd, $rs1, $rs2 */
         show_disas(cpu);
         R[RD] = ~(R[RS1] | R[RS2]);
         break;
 
-    case 0x28: /* shl $rd, $rs1, $rs2 */
+    case 0x27: /* shl $rd, $rs1, $rs2 */
         show_disas(cpu);
         R[RD] = R[RS1] << R[RS2];
         break;
 
-    case 0x29: /* shli $rd, $rs1, #imm16 */
+    case 0x28: /* shli $rd, $rs1, #imm16 */
         show_disas(cpu);
         R[RD] = R[RS1] << I16;
         break;
 
-    case 0x2a: /* shr $rd, $rs1, $rs2 */
+    case 0x29: /* shr $rd, $rs1, $rs2 */
         show_disas(cpu);
         R[RD] = R[RS1] >> R[RS2];
         break;
 
-    case 0x2b: /* shri $rd, $rs1, #imm16 */
+    case 0x2a: /* shri $rd, $rs1, #imm16 */
         show_disas(cpu);
         R[RD] = R[RS1] >> I16;
         break;
 
-    case 0x2c: /* add $rd, $rs1, $rs2 */
+    case 0x2b: /* add $rd, $rs1, $rs2 */
         show_disas(cpu);
         R[RD] = R[RS1] + R[RS2];
         break;
 
-    case 0x2d: /* addi $rd, $rs1, #imm16 */
+    case 0x2c: /* addi $rd, $rs1, #imm16 */
         show_disas(cpu);
         R[RD] = (int64_t)R[RS1] + (int16_t)I16;
         break;
 
-    case 0x2e: /* addiu $rd, $rs1, #imm16 */
+    case 0x2d: /* addiu $rd, $rs1, #imm16 */
         show_disas(cpu);
         R[RD] = R[RS1] + R[RS2];
         break;
 
-    case 0x2f: /* sub $rd, $rs1, $rs2 */
+    case 0x2e: /* sub $rd, $rs1, $rs2 */
         show_disas(cpu);
         R[RD] = (int64_t)R[RS1] - (int16_t)I16;
         break;
 
-    case 0x30: /* subu $rd, $rs1, $rs2 */
+    case 0x2f: /* subu $rd, $rs1, $rs2 */
         show_disas(cpu);
         R[RD] = R[RS1] - I16;
         break;
 
-    case 0x31: /* mul $rs1, $rs2 */
+    case 0x30: /* mul $rs1, $rs2 */
         show_disas(cpu);
         mult64to128(R[RS1], R[RS2], &cpu->hi, &cpu->lo, 0);
         break;
 
-    case 0x32: /* mulu $rs1, $rs2 */
+    case 0x31: /* mulu $rs1, $rs2 */
         show_disas(cpu);
         mult64to128(R[RS1], R[RS2], &cpu->hi, &cpu->lo, 1);
         break;
 
-    case 0x33: /* div $rs1, $rs2 */
+    case 0x32: /* div $rs1, $rs2 */
         show_disas(cpu);
         cpu->hi = (int64_t)R[RS1] % (int64_t)R[RS2];
         cpu->lo = (int64_t)R[RS1] / (int64_t)R[RS2];
         break;
 
-    case 0x34: /* divu $rs1, $rs2 */
+    case 0x33: /* divu $rs1, $rs2 */
         show_disas(cpu);
         cpu->hi = R[RS1] % R[RS2];
         cpu->lo = R[RS1] / R[RS2];

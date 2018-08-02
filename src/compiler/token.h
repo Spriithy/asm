@@ -26,6 +26,7 @@ typedef struct {
     };
 } tok_t;
 
+char* kind_str(tkind_t kind);
 char* tok_str(tok_t* token);
 
 #endif // token.h

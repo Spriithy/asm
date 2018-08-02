@@ -11,6 +11,19 @@ char* token_kind_names[] = {
     [TOK_STR] = "string",
 };
 
+char* kind_str(tkind_t kind)
+{
+    char* str;
+    if (kind == TOK_EOF) {
+        return intern("eof");
+    } else if (kind > 127) {
+        return intern(token_kind_names[kind]);
+    }
+
+    asprintf(&str, "%c", kind);
+    return intern(str);
+}
+
 char* tok_str(tok_t* tok)
 {
     char* str;

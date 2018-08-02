@@ -1,5 +1,6 @@
 #include "disasm.h"
 #include "decode.h"
+#include "intern.h"
 #include "run/cpu.h"
 #include <string.h>
 
@@ -10,6 +11,264 @@
 #define OFFSET DECODE_OFFSET(code[i])
 #define I16 DECODE_I16(code[i])
 #define I24 DECODE_I24(code[i])
+
+char* instr_nop;
+char* instr_int;
+char* instr_breakpoint;
+char* instr_lb;
+char* instr_lbu;
+char* instr_lh;
+char* instr_lhu;
+char* instr_lui;
+char* instr_lw;
+char* instr_lwu;
+char* instr_ld;
+char* instr_sb;
+char* instr_sh;
+char* instr_sw;
+char* instr_sd;
+char* instr_mov;
+char* instr_mfhi;
+char* instr_mthi;
+char* instr_mflo;
+char* instr_mtlo;
+char* instr_slt;
+char* instr_sltu;
+char* instr_slti;
+char* instr_sltiu;
+char* instr_eq;
+char* instr_eqi;
+char* instr_eqiu;
+char* instr_or;
+char* instr_ori;
+char* instr_and;
+char* instr_andi;
+char* instr_xor;
+char* instr_xori;
+char* instr_nor;
+char* instr_shl;
+char* instr_shli;
+char* instr_shr;
+char* instr_shri;
+char* instr_add;
+char* instr_addi;
+char* instr_addu;
+char* instr_addiu;
+char* instr_sub;
+char* instr_subu;
+char* instr_mul;
+char* instr_mulu;
+char* instr_div;
+char* instr_divu;
+char* instr_mod;
+char* instr_modu;
+char* instr_pushw;
+char* instr_push;
+char* instr_popw;
+char* instr_pop;
+char* instr_call;
+char* instr_ret;
+char* instr_j;
+char* instr_jr;
+char* instr_je;
+char* instr_jne;
+
+static int __interned = 0;
+
+#define INSTR(name) instr_##name = intern(#name)
+
+void intern_instr_names()
+{
+    INSTR(nop);
+    INSTR(int);
+    INSTR(breakpoint);
+    INSTR(lb);
+    INSTR(lbu);
+    INSTR(lh);
+    INSTR(lhu);
+    INSTR(lui);
+    INSTR(lw);
+    INSTR(lwu);
+    INSTR(ld);
+    INSTR(sb);
+    INSTR(sh);
+    INSTR(sw);
+    INSTR(sd);
+    INSTR(mov);
+    INSTR(mfhi);
+    INSTR(mthi);
+    INSTR(mflo);
+    INSTR(mtlo);
+    INSTR(slt);
+    INSTR(sltu);
+    INSTR(slti);
+    INSTR(sltiu);
+    INSTR(eq);
+    INSTR(eqi);
+    INSTR(eqiu);
+    INSTR(or);
+    INSTR(ori);
+    INSTR(and);
+    INSTR(andi);
+    INSTR(xor);
+    INSTR(xori);
+    INSTR(nor);
+    INSTR(shl);
+    INSTR(shli);
+    INSTR(shr);
+    INSTR(shri);
+    INSTR(add);
+    INSTR(addi);
+    INSTR(addiu);
+    INSTR(sub);
+    INSTR(subu);
+    INSTR(mul);
+    INSTR(mulu);
+    INSTR(div);
+    INSTR(divu);
+    INSTR(mod);
+    INSTR(modu);
+    INSTR(pushw);
+    INSTR(push);
+    INSTR(popw);
+    INSTR(pop);
+    INSTR(call);
+    INSTR(ret);
+    INSTR(j);
+    INSTR(jr);
+    INSTR(je);
+    INSTR(jne);
+
+    __interned = 1;
+}
+
+int instr_opcode(char* instr)
+{
+    if (!__interned) {
+        intern_instr_names();
+    }
+
+    if (instr == instr_nop)
+        return 0x00;
+    if (instr == instr_int)
+        return 0x01;
+    if (instr == instr_breakpoint)
+        return 0x02;
+
+    if (instr == instr_lb)
+        return 0x04;
+    if (instr == instr_lbu)
+        return 0x05;
+    if (instr == instr_lh)
+        return 0x06;
+    if (instr == instr_lhu)
+        return 0x07;
+    if (instr == instr_lui)
+        return 0x08;
+    if (instr == instr_lw)
+        return 0x09;
+    if (instr == instr_lwu)
+        return 0x0a;
+    if (instr == instr_ld)
+        return 0x0b;
+
+    if (instr == instr_sb)
+        return 0x0c;
+    if (instr == instr_sh)
+        return 0x0d;
+    if (instr == instr_sw)
+        return 0x0e;
+    if (instr == instr_sd)
+        return 0x0f;
+
+    if (instr == instr_mov)
+        return instr_opcode(instr_add);
+    if (instr == instr_mfhi)
+        return 0x11;
+    if (instr == instr_mthi)
+        return 0x12;
+    if (instr == instr_mflo)
+        return 0x13;
+    if (instr == instr_mtlo)
+        return 0x14;
+
+    if (instr == instr_slt)
+        return 0x15;
+    if (instr == instr_slti)
+        return 0x16;
+    if (instr == instr_sltiu)
+        return 0x17;
+    if (instr == instr_eq)
+        return 0x18;
+    if (instr == instr_eqi)
+        return 0x19;
+    if (instr == instr_eqiu)
+        return 0x1a;
+
+    if (instr == instr_or)
+        return 0x20;
+    if (instr == instr_ori)
+        return 0x21;
+    if (instr == instr_and)
+        return 0x22;
+    if (instr == instr_andi)
+        return 0x23;
+    if (instr == instr_xor)
+        return 0x24;
+    if (instr == instr_xori)
+        return 0x25;
+    if (instr == instr_nor)
+        return 0x26;
+    if (instr == instr_shl)
+        return 0x27;
+    if (instr == instr_shli)
+        return 0x28;
+    if (instr == instr_shr)
+        return 0x29;
+    if (instr == instr_shri)
+        return 0x2a;
+    if (instr == instr_add)
+        return 0x2b;
+    if (instr == instr_addi)
+        return 0x2c;
+    if (instr == instr_addiu)
+        return 0x2d;
+    if (instr == instr_sub)
+        return 0x2e;
+    if (instr == instr_subu)
+        return 0x2f;
+    if (instr == instr_mul)
+        return 0x30;
+    if (instr == instr_mulu)
+        return 0x31;
+    if (instr == instr_div)
+        return 0x32;
+    if (instr == instr_divu)
+        return 0x33;
+
+    if (instr == instr_pushw)
+        return 0x36;
+    if (instr == instr_push)
+        return 0x37;
+    if (instr == instr_popw)
+        return 0x38;
+    if (instr == instr_pop)
+        return 0x39;
+    if (instr == instr_call)
+        return 0x3a;
+    if (instr == instr_ret)
+        return 0x3b;
+    if (instr == instr_j)
+        return 0x3c;
+    if (instr == instr_jr)
+        return 0x3d;
+    if (instr == instr_je)
+        return 0x3e;
+    if (instr == instr_jne)
+        return 0x3f;
+
+    return 0x00;
+}
 
 char* reg_name(int reg)
 {

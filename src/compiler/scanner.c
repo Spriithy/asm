@@ -52,11 +52,6 @@ scanner_t* scanner_init(char* file_name)
 void scanner_delete(scanner_t* scan)
 {
     fclose(scan->file);
-
-    vector_iter(error_t*, err, scan->err_list)
-    {
-        error_free(err);
-    }
 }
 
 #define pos() __pos(scan)
@@ -131,15 +126,14 @@ static void make_tok(scanner_t* scan)
     };
 }
 
-#define scanner_errorf(fmt, ...)                                                                                     \
-    {                                                                                                                \
-        char* sfmt;                                                                                                  \
-        asprintf(&sfmt, "%s ~ line %zu, column %zu\n\t=> %s", scan->file_name, scan->tok->lno, scan->tok->col, fmt); \
-                                                                                                                     \
-        error_t* err = errorf(sfmt, ##__VA_ARGS__);                                                                  \
-        vector_push(scan->err_list, err);                                                                            \
-                                                                                                                     \
-        free(sfmt);                                                                                                  \
+#define scanner_errorf(fmt, ...)                                                                           \
+    {                                                                                                      \
+        char*       sfmt;                                                                                  \
+        static char buf[1024];                                                                             \
+        asprintf(&sfmt, "error :: %s(%zu:%zu): %s", scan->file_name, scan->tok->lno, scan->tok->col, fmt); \
+        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                                                   \
+        printf("%s\n", buf);                                                                               \
+        free(sfmt);                                                                                        \
     }
 
 static void scan_name(scanner_t* scan)
@@ -208,7 +202,7 @@ static void scan_num(scanner_t* scan)
         }
 
         if (scan->tok->int_val > (ULLONG_MAX - digit) / base) {
-            scanner_errorf("integer literal overflow");
+            scanner_errorf("integer literal overflow (%zu)", scan->tok->int_val);
             while (fmatch(isdigit)) {
             }
 
