@@ -19,6 +19,7 @@ uint32_t buf_read_uint32(buf_t* buf, size_t at);
 uint64_t buf_read_uint64(buf_t* buf, size_t at);
 char*    buf_read_str(buf_t* buf, size_t at);
 
+size_t buf_memcpy(buf_t* buf, size_t at, uint8_t* src, size_t len);
 size_t buf_write_uint8(buf_t* buf, size_t at, uint8_t x);
 size_t buf_write_uint16(buf_t* buf, size_t at, uint16_t x);
 size_t buf_write_uint32(buf_t* buf, size_t at, uint32_t x);

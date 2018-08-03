@@ -75,6 +75,15 @@ char* buf_read_str(buf_t* buf, size_t at)
     return (char*)buf->bytes + at;
 }
 
+size_t buf_memcpy(buf_t* buf, size_t at, uint8_t* src, size_t len)
+{
+    if (!buf_fits(buf, len)) {
+        buf_grow(buf, buf->len + len);
+    }
+    memcpy(buf->bytes + at, src, len);
+    return at + len;
+}
+
 size_t buf_write_uint8(buf_t* buf, size_t at, uint8_t x)
 {
     if (!buf_fits(buf, sizeof(x))) {
@@ -116,12 +125,7 @@ size_t buf_write_uint64(buf_t* buf, size_t at, uint64_t x)
 
 size_t buf_write_str(buf_t* buf, size_t at, char* str)
 {
-    size_t len = strlen(str);
-    if (!buf_fits(buf, len)) {
-        buf_grow(buf, buf->len + len);
-    }
-    memcpy(buf->bytes + at, str, len);
-    return at + len;
+    return buf_memcpy(buf, at, (uint8_t*)str, strlen(str));
 }
 
 void buf_free(buf_t** buf)
