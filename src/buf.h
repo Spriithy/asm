@@ -5,10 +5,12 @@
 #include <stdint.h>
 
 typedef struct {
-    size_t   len;
     size_t   cap;
     uint8_t* bytes;
 } buf_t;
+
+#define buf_read(buf, at) buf_read_uint8(buf, at)
+#define buf_write(buf, at, c) buf_write_uint8(buf, at, c)
 
 buf_t* buf_alloc(size_t cap);
 buf_t* buf_from(uint8_t* data, size_t len);
