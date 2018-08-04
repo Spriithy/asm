@@ -27,13 +27,14 @@ typedef struct {
 typedef struct {
     char*      file_name;
     scanner_t* scan;
+    int        debug;
     tok_t*     tok;
     tok_t*     prev;
-    ast_t*     ast;
-    error_t**  err_list;
+    int        seg;
 } parser_t;
 
 parser_t* parser_init(char* file_name);
+void      parser_set_debug(parser_t* pars, int debug);
 void      parser_delete(parser_t* parser);
 
 void parse(parser_t* pars);

@@ -519,63 +519,59 @@ void disasm(cpu_t* cpu, FILE* f, uint32_t* code, size_t code_size)
             fprintf(f, "xori  %s, %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
-        case 0x26: /* not %reg_name(RD), %rs1 */
-            fprintf(f, "not   %s, %s\n", reg_name(RD), reg_name(RS1));
-            break;
-
-        case 0x27: /* nor %reg_name(RD), %reg_name(RS1), %rs2 */
+        case 0x26: /* nor %reg_name(RD), %reg_name(RS1), %rs2 */
             fprintf(f, "nor   %s, %s, %s\n", reg_name(RD), reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x28: /* shl %reg_name(RD), %reg_name(RS1), %rs2 */
+        case 0x27: /* shl %reg_name(RD), %reg_name(RS1), %rs2 */
             fprintf(f, "shl   %s, %s, %s\n", reg_name(RD), reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x29: /* shli %reg_name(RD), %reg_name(RS1), #imm16 */
+        case 0x28: /* shli %reg_name(RD), %reg_name(RS1), #imm16 */
             fprintf(f, "shli  %s, %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
-        case 0x2a: /* shr %reg_name(RD), %reg_name(RS1), %rs2 */
+        case 0x29: /* shr %reg_name(RD), %reg_name(RS1), %rs2 */
             fprintf(f, "shr   %s, %s, %s\n", reg_name(RD), reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x2b: /* shri %reg_name(RD), %reg_name(RS1), #imm16 */
+        case 0x2a: /* shri %reg_name(RD), %reg_name(RS1), #imm16 */
             fprintf(f, "shri  %s, %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
-        case 0x2c: /* add %reg_name(RD), %reg_name(RS1), %rs2 */
+        case 0x2b: /* add %reg_name(RD), %reg_name(RS1), %rs2 */
             fprintf(f, "add   %s, %s, %s\n", reg_name(RD), reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x2d: /* addi %reg_name(RD), %reg_name(RS1), #imm16 */
+        case 0x2c: /* addi %reg_name(RD), %reg_name(RS1), #imm16 */
             fprintf(f, "addi  %s, %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
-        case 0x2e: /* addiu %reg_name(RD), %reg_name(RS1), #imm16 */
+        case 0x2d: /* addiu %reg_name(RD), %reg_name(RS1), #imm16 */
             fprintf(f, "addiu %s, %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
-        case 0x2f: /* sub %rd, %rs1, %rs2 */
+        case 0x2e: /* sub %rd, %rs1, %rs2 */
             fprintf(f, "sub   %s, %s, %s\n", reg_name(RD), reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x30: /* subu %reg_name(RD), %reg_name(RS1), %rs2 */
+        case 0x2f: /* subu %reg_name(RD), %reg_name(RS1), %rs2 */
             fprintf(f, "subu  %s, %s, %s\n", reg_name(RD), reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x31: /* mul %reg_name(RS1), %rs2 */
+        case 0x30: /* mul %reg_name(RS1), %rs2 */
             fprintf(f, "mul   %s, %s\n", reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x32: /* mulu %reg_name(RS1), %rs2 */
+        case 0x31: /* mulu %reg_name(RS1), %rs2 */
             fprintf(f, "mulu  %s, %s\n", reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x33: /* div %reg_name(RS1), %rs2 */
+        case 0x32: /* div %reg_name(RS1), %rs2 */
             fprintf(f, "div   %s, %s\n", reg_name(RS1), reg_name(RS2));
             break;
 
-        case 0x34: /* divu %reg_name(RS1), %rs2 */
+        case 0x33: /* divu %reg_name(RS1), %rs2 */
             fprintf(f, "divu  %s, %s\n", reg_name(RS1), reg_name(RS2));
             break;
 
@@ -596,7 +592,7 @@ void disasm(cpu_t* cpu, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3a: /* call label */
-            if (cpu->debug)
+            if (cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "call  0x%X<%s>\n", I24, cpu->text_syms[I24]);
             else
                 fprintf(f, "call  0x%X\n", I24);
@@ -607,7 +603,7 @@ void disasm(cpu_t* cpu, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3c: /* j label */
-            if (cpu->debug)
+            if (cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "j     0x%X<%s>\n", I24, cpu->text_syms[I24]);
             else
                 fprintf(f, "j     0x%X\n", I24);
@@ -621,14 +617,14 @@ void disasm(cpu_t* cpu, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3e: /* je %reg_name(RS1), %reg_name(RS2), label */
-            if (cpu->debug)
+            if (cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "je    %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu->text_syms[I16]);
             else
                 fprintf(f, "je    %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
         case 0x3f: /* jne %reg_name(RS1), %reg_name(RS2), label */
-            if (cpu->debug)
+            if (cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "jne   %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu->text_syms[I16]);
             else
                 fprintf(f, "jne   %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);

@@ -25,14 +25,26 @@
 static jit_t jit;
 static cpu_t cpu;
 
-#define jit_errorf(fmt, ...)                                                    \
-    {                                                                           \
-        char*       sfmt;                                                       \
-        static char buf[1024];                                                  \
-        asprintf(&sfmt, "error :: jit(%zu): %s", vector_length(jit.code), fmt); \
-        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                        \
-        printf("%s\n", buf);                                                    \
-        free(sfmt);                                                             \
+void jit_init()
+{
+    jit.data_seg = buf_alloc(1024);
+    jit.data_ptr = 0;
+    jit.debug = 0;
+}
+
+void jit_set_debug(int debug)
+{
+    jit.debug = debug;
+}
+
+#define jit_errorf(fmt, ...)                                                               \
+    {                                                                                      \
+        char*       sfmt;                                                                  \
+        static char buf[1024];                                                             \
+        asprintf(&sfmt, "\e[31merror\e[0m :: jit(%zu): %s", vector_length(jit.code), fmt); \
+        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                                   \
+        printf("%s\n", buf);                                                               \
+        free(sfmt);                                                                        \
     }
 
 void jit_rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off)
@@ -55,16 +67,16 @@ void jit_label(char* name)
     vector_iter(label_t, label, jit.labels)
     {
         if (strcmp(name, label->name) == 0) {
-            jit_errorf("label redefinition: '%s'. Previous definition was here 0x%X\n", label->name, label->addr);
+            jit_errorf("label redefinition: '%s'. Previous definition was here 0x%X", label->name, label->addr);
             jit.error++;
             return;
         }
     }
 
-    vector_iter(datasym_t, sym, jit.data_syms)
+    vector_iter(sym_t, sym, jit.data_syms)
     {
-        if (strcmp(name, sym->sym.name) == 0) {
-            jit_errorf("definition of label '%s' ovejit_rrides previous data symbol declaration here 0x%X\n", sym->sym.name, sym->sym.addr);
+        if (strcmp(name, sym->name) == 0) {
+            jit_errorf("definition of label '%s' overrides previous data symbol declaration here 0x%X", sym->name, sym->addr);
             jit.error++;
             return;
         }
@@ -75,17 +87,17 @@ void jit_label(char* name)
 
 void jit_data(char* name, uint8_t* data, size_t data_size)
 {
-    vector_iter(datasym_t, sym, jit.data_syms)
+    vector_iter(sym_t, sym, jit.data_syms)
     {
-        if (strcmp(name, sym->sym.name) == 0) {
-            jit_errorf("data symbol redefinition: '%s'. Previous definition was here 0x%X\n", sym->sym.name, sym->sym.addr);
+        if (strcmp(name, sym->name) == 0) {
+            jit_errorf("data symbol redefinition: '%s'. Previous definition was here 0x%X", sym->name, sym->addr);
             jit.error++;
             return;
         }
     }
 
-    jit.data_offset += data_size;
-    vector_push(jit.data_syms, (datasym_t){ { name, jit.data_offset - data_size }, data, data_size });
+    jit.data_ptr = buf_memcpy(jit.data_seg, jit.data_ptr, data, data_size);
+    vector_push(jit.data_syms, (sym_t){ name, jit.data_ptr - data_size });
 }
 
 void jit_nop(void)
@@ -415,34 +427,27 @@ void jit_jne(uint32_t rs1, uint32_t rs2, char* label)
     jit_jump(0x3f, rs1, rs2, label);
 }
 
-void jit_run(int debug)
+void jit_run()
 {
     jit_utils();
 
-    if (cpu.debug) {
-        char** labels = malloc(vector_length(jit.code) * sizeof(*labels));
+    if (jit.debug) {
+        cpu.text_syms = malloc(vector_length(jit.code) * sizeof(*cpu.text_syms));
+        if (cpu.text_syms == NULL) {
+            perror("jit_run.setup_symbols");
+            exit(-1);
+        }
+
         vector_iter(label_t, label, jit.labels)
         {
-            labels[label->addr] = label->name;
-        }
-        cpu.text_syms = labels;
-
-        char** data_syms = malloc(vector_length(jit.data_syms) * sizeof(*data_syms));
-        vector_iter(datasym_t, sym, jit.data_syms)
-        {
-            data_syms[sym->sym.addr] = sym->sym.name;
+            cpu.text_syms[label->addr] = label->name;
         }
     }
 
     size_t addr = 0;
     int    mapped;
 
-    // generate static data segment
-    vector_iter(datasym_t, sym, jit.data_syms)
-    {
-        memcpy(cpu.data + addr, sym->data, sym->data_size);
-        addr += sym->data_size;
-    }
+    cpu.data = jit.data_seg->bytes;
 
     // generate text segment
     addr = 0;
@@ -471,7 +476,7 @@ void jit_run(int debug)
                         cpu.text[addr++] = RI16(0x21, ir->rs1, at, mapped);
                         break;
                     default:
-                        jit_errorf("unknown symbol '%s' referenced in instruction 0x%X\n", ir->label, ir->op);
+                        jit_errorf("unknown symbol '%s' referenced in instruction 0x%X", ir->label, ir->op);
                         jit.error++;
                     }
 
@@ -481,10 +486,10 @@ void jit_run(int debug)
             }
 
             if (ir->op == 0xff) {
-                vector_iter(datasym_t, sym, jit.data_syms)
+                vector_iter(sym_t, sym, jit.data_syms)
                 {
-                    if (strcmp(ir->label, sym->sym.name) == 0) {
-                        mapped = sizeof(cpu.text) + sym->sym.addr;
+                    if (strcmp(ir->label, sym->name) == 0) {
+                        mapped = sizeof(cpu.text) + sym->addr;
                         cpu.text[addr++] = RI16(0x08, at, 0, mapped >> 16);
                         cpu.text[addr++] = RI16(0x21, ir->rs1, at, mapped);
                         found++;
@@ -494,7 +499,7 @@ void jit_run(int debug)
             }
 
             if (!found) {
-                jit_errorf("reference to undefined symbol '%s'\n", ir->label);
+                jit_errorf("reference to undefined symbol '%s'", ir->label);
                 jit.error++;
             }
         } else {
@@ -502,9 +507,6 @@ void jit_run(int debug)
         }
     }
 
-    if (debug) {
-        cpu.debug = 1;
-    }
-
+    cpu.debug = jit.debug;
     cpu_exec(&cpu);
 }

@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MEM_SIZE (0x1e84800) // 32 Mb
+
 #define OP DECODE_OP(*(cpu->ip))
 #define RD DECODE_RD(*(cpu->ip))
 #define RS1 DECODE_RS1(*(cpu->ip))
@@ -22,6 +24,20 @@
 static inline void interrupt(cpu_t* cpu)
 {
     switch (R[4]) {
+    case 0x03: /* grow_mem */
+        if ((int64_t)R[5] > 0) {
+            uint64_t old = (uint64_t)cpu->data;
+            cpu->data_size += R[5];
+            cpu->data = realloc(cpu->data, cpu->data_size);
+            if (cpu->data == NULL) {
+                perror("cpu_exec.grow_mem");
+                exit(-1);
+            }
+        }
+        break;
+    case 0x04: /* getchar */
+        R[2] = getchar();
+        break;
     case 0x05: /* putchar */
         putchar((int)R[5]);
         break;
@@ -110,9 +126,16 @@ void cpu_exec(cpu_t* cpu)
 {
     uint64_t addr;
 
+    cpu->data_size = MEM_SIZE;
+    cpu->data = malloc(cpu->data_size);
+    if (cpu->data == NULL) {
+        perror("cpu_exec");
+        exit(-1);
+    }
+
     cpu->cycles = 0;
     cpu->ip = cpu->text;
-    GP = FP = SP = (uint64_t)(cpu->data - (uint8_t*)cpu->text) + sizeof(cpu->data);
+    GP = FP = SP = (uint64_t)(cpu->data - (uint8_t*)cpu->text) + cpu->data_size;
 
 cpu_loop:
     if (cpu->debug)
@@ -129,8 +152,8 @@ cpu_loop:
         break;
 
     case 0x02: /* breakpoint */
-        show_disas(cpu);
         if (cpu->debug) {
+            show_disas(cpu);
             breakpoint();
             cpu->ip++, cpu->cycles++;
             R[0] = 0x0; // $r0 is hard wired to 0
@@ -361,12 +384,20 @@ cpu_loop:
 
     case 0x32: /* div $rs1, $rs2 */
         show_disas(cpu);
+        if (R[RS2] == 0) {
+            printf("error: division by zero\n");
+            exit(-1);
+        }
         cpu->hi = (int64_t)R[RS1] % (int64_t)R[RS2];
         cpu->lo = (int64_t)R[RS1] / (int64_t)R[RS2];
         break;
 
     case 0x33: /* divu $rs1, $rs2 */
         show_disas(cpu);
+        if (R[RS2] == 0) {
+            printf("error: division by zero\n");
+            exit(-1);
+        }
         cpu->hi = R[RS1] % R[RS2];
         cpu->lo = R[RS1] / R[RS2];
         break;

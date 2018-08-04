@@ -1,6 +1,7 @@
 #ifndef EMU64_JIT_H
 #define EMU64_JIT_H
 
+#include "buf.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -11,34 +12,32 @@ typedef struct {
 } instr_t;
 
 typedef struct {
-    char*    name;
-    uint32_t addr;
+    char*  name;
+    size_t addr;
 } sym_t;
 
 typedef sym_t label_t;
 
 typedef struct {
-    sym_t    sym;
-    uint8_t* data;
-    size_t   data_size;
-} datasym_t;
-
-typedef struct {
-    instr_t*   code;
-    label_t*   labels;
-    datasym_t* data_syms;
-    size_t     data_offset;
-    size_t     error;
+    instr_t* code;
+    label_t* labels;
+    buf_t*   data_seg;
+    size_t   data_ptr;
+    sym_t*   data_syms;
+    size_t   error;
+    int      debug;
 } jit_t;
 
-void jit_run(int debug);
+void jit_init(void);
+void jit_run(void);
+void jit_set_debug(int debug);
+
+void jit_data(char* name, uint8_t* data, size_t data_size);
+void jit_label(char* name);
 
 void jit_rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off);
 void jit_ri16(uint32_t op, uint32_t rd, uint32_t rs1, int16_t imm16);
 void jit_jump(uint32_t op, uint32_t rs1, uint32_t rs2, char* label);
-
-void jit_data(char* name, uint8_t* data, size_t data_size);
-void jit_label(char* name);
 
 void jit_nop(void);
 void jit_int(void);

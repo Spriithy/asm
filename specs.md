@@ -1,5 +1,7 @@
 # Specs
 
+Machine has 32 Mb RAM and 256 Mb Disk-space.
+
   Register       Name       Desc.              Saved
 ------------------------------------------------------
   r0             zero       always zero          —

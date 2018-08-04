@@ -9,7 +9,7 @@ typedef enum {
     _ = 128,
     TOK_REG, // %(r[0-31]|name)
     TOK_NAME, // [a-zA-Z_][a-zA-Z_0-9]*
-    TOK_INT, // [1-9][0-9]* | 0[xX][0-9a-fA-F]+
+    TOK_INT, // [1-9][0-9]* | 0[xX][0-9a-fA-F]+ | 0[bB][01]+ | 0[0-7]+
     TOK_CHR, // '\'' . '\''
     TOK_STR, // '"' [^"]* '"'
 } tkind_t;

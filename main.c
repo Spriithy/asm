@@ -1,3 +1,4 @@
+#include "src/buf.h"
 #include "src/compiler/parser.h"
 #include "src/error.h"
 #include "src/intern.h"
@@ -27,10 +28,13 @@ int main(int argc, char** argv)
     }
 
     if (in_file != NULL) {
+        jit_init();
+        jit_set_debug(debug);
         parser_t* pars = parser_init(in_file);
+        parser_set_debug(pars, debug);
         parse(pars);
         parser_delete(pars);
-        jit_run(debug);
+        jit_run();
     } else {
         printf("error: no input file\n");
         free_interns();

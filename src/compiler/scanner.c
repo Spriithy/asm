@@ -7,6 +7,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define scanner_debug(...)   \
+    if (scan->debug) {       \
+        printf(__VA_ARGS__); \
+    }
+
+#define scanner_error(text) \
+    printf("\e[31merror\e[0m :: %s(%zu:%zu): %s\n", scan->file_name, scan->tok->lno, scan->tok->col, text)
+
+#define scanner_warning(text) \
+    printf("warning :: %s(%zu:%zu): %s\n", scan->file_name, scan->tok->lno, scan->tok->col, text)
+
+#define scanner_errorf(fmt, ...)                                                                                      \
+    {                                                                                                                 \
+        char*       sfmt;                                                                                             \
+        static char buf[1024];                                                                                        \
+        asprintf(&sfmt, "\e[31merror\e[0m :: %s(%zu:%zu): %s", scan->file_name, scan->tok->lno, scan->tok->col, fmt); \
+        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                                                              \
+        printf("%s\n", buf);                                                                                          \
+        free(sfmt);                                                                                                   \
+    }
+
 scanner_t* scanner_init(char* file_name)
 {
     scanner_t* scan = malloc(sizeof(*scan));
@@ -47,6 +68,11 @@ scanner_t* scanner_init(char* file_name)
     scan->col = 1;
 
     return scan;
+}
+
+void scanner_set_debug(scanner_t* scan, int debug)
+{
+    scan->debug = debug;
 }
 
 void scanner_delete(scanner_t* scan)
@@ -105,6 +131,17 @@ static int __fmatch(scanner_t* scan, int (*func)(int))
     return 0;
 }
 
+#define expect(c) __expect(scan, c)
+static int __expect(scanner_t* scan, int c)
+{
+    if (!match(c)) {
+        scanner_errorf("expected '%c', got '%c'", c, chr());
+        return 0;
+    }
+
+    return 1;
+}
+
 static int is_name_start(int c)
 {
     return isalpha(c) || c == '_' || c == '.';
@@ -126,21 +163,15 @@ static void make_tok(scanner_t* scan)
     };
 }
 
-#define scanner_errorf(fmt, ...)                                                                           \
-    {                                                                                                      \
-        char*       sfmt;                                                                                  \
-        static char buf[1024];                                                                             \
-        asprintf(&sfmt, "error :: %s(%zu:%zu): %s", scan->file_name, scan->tok->lno, scan->tok->col, fmt); \
-        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                                                   \
-        printf("%s\n", buf);                                                                               \
-        free(sfmt);                                                                                        \
-    }
-
 static void scan_name(scanner_t* scan)
 {
     scan->tok->kind = TOK_NAME;
     for (; is_name_part(chr());) {
         fwd();
+    }
+
+    if (scan->debug) {
+        printf("scanner_tok -> %s\n", tok_str(scan->tok));
     }
 }
 
@@ -213,9 +244,7 @@ static void scan_num(scanner_t* scan)
         fwd();
     }
 
-    if (pos() == scan->tok->start) {
-        scanner_errorf("expected base %d digit, got '%c'", base, chr());
-    }
+    scanner_debug("  -> %s\n", tok_str(scan->tok));
 }
 
 static void scan_reg(scanner_t* scan)
@@ -233,6 +262,8 @@ static void scan_reg(scanner_t* scan)
     }
 
     scan->tok->int_val = reg - 1;
+
+    scanner_debug("  -> %s\n", tok_str(scan->tok));
 }
 
 static void discard_spaces(scanner_t* scan)
@@ -254,6 +285,140 @@ static int comment(scanner_t* scan)
     return b;
 }
 
+static void mkstr(tok_t* tok)
+{
+    char*  str = intern_range(tok->start + 1, tok->end - 1);
+    size_t len = strlen(str);
+
+    tok->str_val = malloc(len);
+    if (tok->str_val == NULL) {
+        perror("mkstr");
+        exit(-1);
+    }
+
+    char* rc = tok->str_val;
+    for (char* c = str; c != '\0';) {
+        switch (*c) {
+        case '\\':
+            switch (*++c) {
+            case '0':
+                *rc++ = '\0';
+                break;
+
+            case 'n':
+                *rc++ = '\n';
+                break;
+
+            case 'r':
+                *rc++ = '\r';
+                break;
+
+            case 't':
+                *rc++ = '\t';
+                break;
+
+            case '\\':
+                *rc++ = '\\';
+                break;
+
+            case '"':
+                *rc++ = '"';
+                break;
+
+            case '\'':
+                *rc++ = '\'';
+                break;
+            }
+            break;
+
+        default:
+            *rc++ = *c++;
+        }
+    }
+}
+
+static void scan_escape(scanner_t* scan)
+{
+    expect('\\');
+    switch (chr()) {
+    case '0':
+        scan->tok->int_val = '\0';
+        break;
+
+    case 'n':
+        scan->tok->int_val = '\n';
+        break;
+
+    case 'r':
+        scan->tok->int_val = '\r';
+        break;
+
+    case 't':
+        scan->tok->int_val = '\t';
+        break;
+
+    case '\\':
+        scan->tok->int_val = '\\';
+        break;
+
+    case '\'':
+        scan->tok->int_val = '\'';
+        break;
+
+    case '"':
+        scan->tok->int_val = '"';
+        break;
+
+    default:
+        scanner_errorf("unknown escape sequence '\\%c'", chr());
+    }
+
+    fwd();
+}
+
+static void scan_string(scanner_t* scan)
+{
+    scan->tok->kind = TOK_STR;
+    for (; !feof(scan->file);) {
+        if (match('\n')) {
+            scanner_error("unclosed string literal");
+            return;
+        }
+
+        if (fmatch(iscntrl)) {
+            scanner_error("illegal control character in string literal");
+            continue;
+        }
+
+        if (match('"')) {
+            return;
+        }
+
+        if (match('\\')) {
+            scan_escape(scan);
+        }
+
+        fwd();
+    }
+    mkstr(scan->tok);
+    scanner_debug("  -> %s\n", tok_str(scan->tok));
+}
+
+static void scan_char(scanner_t* scan)
+{
+    scan->tok->kind = TOK_INT;
+    switch (chr()) {
+    case '\\':
+        scan_escape(scan);
+        break;
+    default:
+        scan->tok->int_val = chr();
+        fwd();
+    }
+    expect('\'');
+    scanner_debug("  -> %s\n", tok_str(scan->tok));
+}
+
 void scanner_tok(scanner_t* scan)
 {
     scan->tok = NULL;
@@ -268,7 +433,7 @@ void scanner_tok(scanner_t* scan)
         return;
     }
 
-    if (is_name_start(chr())) {
+    if (fmatch(is_name_start)) {
         scan_name(scan);
         return;
     }
@@ -280,6 +445,16 @@ void scanner_tok(scanner_t* scan)
 
     if (match('%')) {
         scan_reg(scan);
+        return;
+    }
+
+    if (match('"')) {
+        scan_string(scan);
+        return;
+    }
+
+    if (match('\'')) {
+        scan_char(scan);
         return;
     }
 
