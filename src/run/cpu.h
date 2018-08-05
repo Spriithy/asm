@@ -7,9 +7,12 @@
 
 typedef struct {
     // Base
-    uint32_t  text[0x80000];
+    uint8_t*  text;
+    size_t    text_size;
     uint8_t*  data;
     size_t    data_size;
+    uint8_t*  mem;
+    size_t    mem_size;
     uint64_t  reg[32];
     uint32_t* ip;
     uint64_t  hi, lo;
@@ -21,6 +24,9 @@ typedef struct {
     char** text_syms;
 } cpu_t;
 
+void cpu_init(cpu_t* cpu);
+void cpu_text(cpu_t* cpu, uint8_t* text, size_t text_size);
+void cpu_data(cpu_t* cpu, uint8_t* data, size_t data_size);
 void cpu_exec(cpu_t* cpu);
 
 #endif // cpu.h

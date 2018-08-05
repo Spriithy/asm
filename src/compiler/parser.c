@@ -27,19 +27,17 @@ parser_t* parser_init(char* file_name)
     pars->file_name = file_name;
     pars->scan = scanner_init(file_name);
 
+    intern_instr_names();
+
     jit_utils();
 
-    jit_label("__start");
-    {
-        jit_addi(a0, zero, 0); // argc
-        jit_addi(a1, zero, 0); // argv
-        jit_call("main");
-        jit_mov(a1, v0);
-        jit_addi(a0, zero, 0x0a);
-        jit_int();
-    }
-
-    intern_instr_names();
+    jit_ri16(0x2c, a0, 0, 0); // argc
+    jit_ri16(0x2c, a1, 0, 0); // argv
+    jit_basic(0x02); // breakpoint
+    jit_jump(0x3a, 0, 0, "main"); // call main
+    jit_rr(0x2b, a1, v0, 0, 0); // mov a1, v0
+    jit_ri16(0x2c, a0, 0, 0x0a); // addi a0, zero, EXIT
+    jit_basic(0x01); // int
 
     fwd();
 
@@ -140,7 +138,7 @@ void __parse_instr(parser_t* pars, char* name)
     if (name_is(nop)) {
     } else if (name_is(int) || name_is(breakpoint) || name_is(ret)) {
         op = instr_opcode(name);
-        jit_rr(op, 0, 0, 0, 0);
+        jit_basic(op);
     } else if (name_is(lb) || name_is(lbu)
         || name_is(lh) || name_is(lhu)
         || name_is(lw) || name_is(lwu)
@@ -158,14 +156,10 @@ void __parse_instr(parser_t* pars, char* name)
         }
         expect(TOK_INT);
         offset *= intval();
-        if (offset < 0) {
-            expect('(');
-        }
+        expect('(');
         expect(TOK_REG);
         rs1 = intval();
-        if (offset < 0) {
-            expect(')');
-        }
+        expect(')');
         if (op <= instr_opcode(instr_sb)) {
             jit_rr(op, rd, rs1, 0, offset);
         } else {
@@ -183,6 +177,12 @@ void __parse_instr(parser_t* pars, char* name)
         expect(TOK_INT);
         imm *= intval();
         jit_ri16(op, rd, 0, imm);
+    } else if (name_is(la)) {
+        expect(TOK_REG);
+        rd = intval();
+        expect(',');
+        expect(TOK_NAME);
+        jit_la(rd, srcstr());
     } else if (name_is(mfhi) || name_is(mflo) || name_is(popw) || name_is(pop)) {
         op = instr_opcode(name);
         expect(TOK_REG);
@@ -220,7 +220,7 @@ void __parse_instr(parser_t* pars, char* name)
             expect(TOK_REG);
             rd = intval();
             jit_rr(op, 0, rs2, rd, 0);
-            jit_mflo(rs1);
+            jit_rr(0x13, 0, rs1, 0, 0);
         } else {
             jit_rr(op, 0, rs1, rs2, 0);
         }
@@ -234,15 +234,20 @@ void __parse_instr(parser_t* pars, char* name)
         expect(',');
         expect(TOK_REG);
         rs2 = intval();
-
-        name_is(mod) ? jit_mod(rd, rs1, rs2) : jit_modu(rd, rs1, rs2);
+        if (name_is(mod)) {
+            jit_rr(0x32, 0, rs1, rs2, 0);
+            jit_rr(0x11, rd, 0, 0, 0);
+        } else {
+            jit_rr(0x33, 0, rs1, rs2, 0);
+            jit_rr(0x11, rd, 0, 0, 0);
+        }
     } else if (name_is(mov)) {
         expect(TOK_REG);
         rd = intval();
         expect(',');
         expect(TOK_REG);
         rs1 = intval();
-        jit_mov(rd, rs1);
+        jit_rr(0x2b, rd, rs1, 0, 0);
     } else if (name_is(slti) || name_is(sltiu) || name_is(eqi) || name_is(eqiu)
         || name_is(ori) || name_is(andi) || name_is(xori) || name_is(shli)
         || name_is(shri) || name_is(addi) || name_is(addiu)) {
@@ -318,7 +323,7 @@ static void __parse_data(parser_t* pars)
                         parser_warning("integer constant overflows byte");
                         val &= 0xff;
                     }
-                    size = buf_write(buf, size, val);
+                    size = buf_write_uint8(buf, size, val);
                     while (match(',')) {
                         expect(TOK_INT);
                         val = intval();
@@ -326,7 +331,7 @@ static void __parse_data(parser_t* pars)
                             parser_warning("integer constant overflows byte");
                             val &= 0xff;
                         }
-                        size = buf_write(buf, size, val);
+                        size = buf_write_uint8(buf, size, val);
                     }
                 } else if (match(TOK_STR)) {
                     buf_write_str(buf, 0, strval());
@@ -379,7 +384,7 @@ static void __parse_data(parser_t* pars)
                 }
                 break;
             }
-            parser_debug("matched data declaration: '%s' (%zu bytes)\n", name, buf->cap);
+            parser_debug("matched data declaration: '%s' (%zu bytes)\n", name, size);
             jit_data(name, buf->bytes, size);
             buf_free(&buf);
         }
@@ -411,6 +416,9 @@ void parse(parser_t* pars)
             parse_instr(name);
             continue;
         }
+
+        parser_errorf("unexpected token '%s'", kind_str(pars->tok->kind));
+        fwd();
     }
 }
 

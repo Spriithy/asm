@@ -23,17 +23,24 @@ void breakpoint(cpu_t* cpu)
         return;
     } else if (strcmp(str, "op") == 0) {
         printf("0x%X\n", *cpu->ip & 0xff);
-    } else if (strcmp(str, "rd") == 0 || strcmp(str, "regdump") == 0) {
+    } else if (strcmp(str, "rd") == 0 || strcmp(str, "reg-dump") == 0) {
         for (int i = 0; i < 32; i++) {
             printf("%s   0x%llX   (%llu)\n", reg_name(i), cpu->reg[i], cpu->reg[i]);
         }
-    } else if (strcmp(str, "si") == 0 || strcmp(str, "stackinspect") == 0) {
+    } else if (strcmp(str, "sd") == 0 || strcmp(str, "stack-dump") == 0) {
         uint64_t* sp = (uint64_t*)cpu->reg[29];
         uint64_t* gp = (uint64_t*)cpu->reg[28] - 1;
-
         while (gp >= sp) {
             printf("0x%llX\n", *gp--);
         }
+    } else if (strcmp(str, "dd") == 0 || strcmp(str, "data-dump") == 0) {
+        for (size_t i = 0; i < 32; i++) {
+            if (i && i % 4 == 0) {
+                printf("\n");
+            }
+            printf("0x%02X ", cpu->data[i]);
+        }
+        printf("\n");
     } else if (strcmp(str, "q") == 0 || strcmp(str, "quit") == 0) {
         exit(0);
     } else {

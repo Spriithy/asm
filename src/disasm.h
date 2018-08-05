@@ -17,6 +17,7 @@ extern char* instr_lui;
 extern char* instr_lw;
 extern char* instr_lwu;
 extern char* instr_ld;
+extern char* instr_la;
 extern char* instr_sb;
 extern char* instr_sh;
 extern char* instr_sw;

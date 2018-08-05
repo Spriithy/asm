@@ -23,6 +23,7 @@ char* instr_lui;
 char* instr_lw;
 char* instr_lwu;
 char* instr_ld;
+char* instr_la;
 char* instr_sb;
 char* instr_sh;
 char* instr_sw;
@@ -90,6 +91,7 @@ void intern_instr_names()
     INSTR(lw);
     INSTR(lwu);
     INSTR(ld);
+    INSTR(la);
     INSTR(sb);
     INSTR(sh);
     INSTR(sw);
@@ -592,7 +594,7 @@ void disasm(cpu_t* cpu, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3a: /* call label */
-            if (cpu->debug && cpu->text_syms != NULL)
+            if (cpu != NULL && cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "call  0x%X<%s>\n", I24, cpu->text_syms[I24]);
             else
                 fprintf(f, "call  0x%X\n", I24);
@@ -603,28 +605,28 @@ void disasm(cpu_t* cpu, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3c: /* j label */
-            if (cpu->debug && cpu->text_syms != NULL)
+            if (cpu != NULL && cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "j     0x%X<%s>\n", I24, cpu->text_syms[I24]);
             else
                 fprintf(f, "j     0x%X\n", I24);
             break;
 
         case 0x3d: /* jr %rs1 */
-            if (cpu->debug)
+            if (cpu != NULL && cpu->debug)
                 fprintf(f, "jr    %s\n", reg_name(RD));
             else
                 fprintf(f, "jr    %s\n", reg_name(RD));
             break;
 
         case 0x3e: /* je %reg_name(RS1), %reg_name(RS2), label */
-            if (cpu->debug && cpu->text_syms != NULL)
+            if (cpu != NULL && cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "je    %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu->text_syms[I16]);
             else
                 fprintf(f, "je    %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
         case 0x3f: /* jne %reg_name(RS1), %reg_name(RS2), label */
-            if (cpu->debug && cpu->text_syms != NULL)
+            if (cpu != NULL && cpu->debug && cpu->text_syms != NULL)
                 fprintf(f, "jne   %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, cpu->text_syms[I16]);
             else
                 fprintf(f, "jne   %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);

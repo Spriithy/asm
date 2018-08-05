@@ -1,5 +1,5 @@
 .data   
-        prompt .b 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!', '\n'
+        prompt .b 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '!', '\n', '\0'
         x      .w 10
 
 .text
@@ -23,7 +23,8 @@ print:  mov  %s0, %a0 ; n
 print.L1:
         jne  %s0, %zero, print.L2
         addi %a0, %zero, 48       ; if (n == zero)
-        call putc ; putc('zero')
+        call putc                 ; putc('zero')
+        ret
 print.L2:
         addi %t0, %zero, 10
         div  %s1, %s0, %t0        ; s1 = n / 10
@@ -47,7 +48,8 @@ fact.L1:
         mflo %v0
         ret
 
-main:   addi %s0, %zero, 10
+main:   la   %t0, x
+        ld   %s0, 0(%t0)
         mov  %a0, %s0
         call print
         addi %a0, %zero, 0x0a

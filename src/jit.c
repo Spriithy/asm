@@ -1,4 +1,5 @@
 #include "jit.h"
+#include "disasm.h"
 #include "run/cpu.h"
 #include "vector.h"
 #include <ctype.h>
@@ -22,491 +23,232 @@
 
 #define I24(op, imm24) (OP32(op) | (imm24 << 8))
 
-static jit_t jit;
-static cpu_t cpu;
+#define jit_debug(...)       \
+    if (jit.debug) {         \
+        printf(__VA_ARGS__); \
+    }
 
-void jit_init()
+#define jit_error(text) \
+    printf("\e[31merror\e[0m :: jit(%zu): %s", jit.code_size, text)
+
+#define jit_warning(text) \
+    printf("warning :: jit(%zu): %s\n", jit.code_size, text)
+
+#define jit_errorf(fmt, ...)                                                     \
+    {                                                                            \
+        char*       sfmt;                                                        \
+        static char buf[1024];                                                   \
+        asprintf(&sfmt, "\e[31merror\e[0m :: jit(%zu): %s", jit.code_size, fmt); \
+        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                         \
+        printf("%s\n", buf);                                                     \
+        free(sfmt);                                                              \
+    }
+
+static jit_t jit;
+
+static void jit_gen(void);
+
+void jit_init(void)
 {
-    jit.data_seg = buf_alloc(1024);
-    jit.data_ptr = 0;
-    jit.debug = 0;
+    cpu_init(&jit.cpu);
+    jit_set_debug(0);
+    jit.text_buf = buf_alloc(1024);
+    jit.text_size = 0;
+    jit.data_buf = buf_alloc(1024);
+    jit.data_size = 0;
+    jit.error = 0;
+}
+
+void jit_run(void)
+{
+    jit_gen();
+    if (jit.error == 0) {
+        cpu_exec(&jit.cpu);
+    }
 }
 
 void jit_set_debug(int debug)
 {
     jit.debug = debug;
-}
-
-#define jit_errorf(fmt, ...)                                                               \
-    {                                                                                      \
-        char*       sfmt;                                                                  \
-        static char buf[1024];                                                             \
-        asprintf(&sfmt, "\e[31merror\e[0m :: jit(%zu): %s", vector_length(jit.code), fmt); \
-        snprintf(buf, sizeof(buf), sfmt, ##__VA_ARGS__);                                   \
-        printf("%s\n", buf);                                                               \
-        free(sfmt);                                                                        \
-    }
-
-void jit_rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off)
-{
-    vector_push(jit.code, (instr_t){ 0, 0, 0, RR(op, rd, rs1, rs2, off), NULL });
-}
-
-void jit_ri16(uint32_t op, uint32_t rd, uint32_t rs1, int16_t imm16)
-{
-    vector_push(jit.code, (instr_t){ 0, 0, 0, RI16(op, rd, rs1, imm16), NULL });
-}
-
-void jit_jump(uint32_t op, uint32_t rs1, uint32_t rs2, char* label)
-{
-    vector_push(jit.code, (instr_t){ op, rs1, rs2, 0, label });
-}
-
-void jit_label(char* name)
-{
-    vector_iter(label_t, label, jit.labels)
-    {
-        if (strcmp(name, label->name) == 0) {
-            jit_errorf("label redefinition: '%s'. Previous definition was here 0x%X", label->name, label->addr);
-            jit.error++;
-            return;
-        }
-    }
-
-    vector_iter(sym_t, sym, jit.data_syms)
-    {
-        if (strcmp(name, sym->name) == 0) {
-            jit_errorf("definition of label '%s' overrides previous data symbol declaration here 0x%X", sym->name, sym->addr);
-            jit.error++;
-            return;
-        }
-    }
-
-    vector_push(jit.labels, (label_t){ name, vector_length(jit.code) });
+    jit.cpu.debug = debug;
 }
 
 void jit_data(char* name, uint8_t* data, size_t data_size)
 {
     vector_iter(sym_t, sym, jit.data_syms)
     {
-        if (strcmp(name, sym->name) == 0) {
-            jit_errorf("data symbol redefinition: '%s'. Previous definition was here 0x%X", sym->name, sym->addr);
-            jit.error++;
+        if (strcmp(sym->name, name) == 0) {
+            jit_errorf("data symbol '%s' redefinition", name);
             return;
         }
     }
 
-    jit.data_ptr = buf_memcpy(jit.data_seg, jit.data_ptr, data, data_size);
-    vector_push(jit.data_syms, (sym_t){ name, jit.data_ptr - data_size });
+    jit_debug("referenced data symbol '%s'", name);
+
+    sym_t sym = (sym_t){ name, jit.data_size };
+    vector_push(jit.data_syms, sym);
+    jit.data_size = buf_write(jit.data_buf, jit.data_size, data, data_size);
+    //jit.data_size = ((jit.data_size + 63) / 64) * 64;
 }
 
-void jit_nop(void)
+void jit_label(char* name)
 {
-    jit_rr(0, 0, 0, 0, 0);
+    vector_iter(sym_t, sym, jit.data_syms)
+    {
+        if (strcmp(sym->name, name) == 0) {
+            jit_errorf("data symbol '%s' redefinition as label", name);
+            return;
+        }
+    }
+
+    vector_iter(sym_t, sym, jit.text_syms)
+    {
+        if (strcmp(sym->name, name) == 0) {
+            jit_errorf("label '%s' redefinition", name);
+            return;
+        }
+    }
+
+    sym_t sym = (sym_t){ name, jit.code_size * 4 };
+    vector_push(jit.text_syms, sym);
 }
 
-void jit_int(void)
+void jit_basic(uint32_t op)
 {
-    jit_rr(0x01, 0, 0, 0, 0);
+    instr_t instr = (instr_t){ .instr = OP32(op) };
+    vector_push(jit.code, instr);
+    jit.code_size++;
 }
 
-void jit_set_breakpoint(void)
+void jit_rr(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2, int off)
 {
-    jit_rr(0x02, 0, 0, 0, 0);
+    instr_t instr = (instr_t){ .instr = RR(op, rd, rs1, rs2, off) };
+    vector_push(jit.code, instr);
+    jit.code_size++;
 }
 
-void jit_lb(uint32_t rd, uint32_t rs1, int off)
+void jit_ri16(uint32_t op, uint32_t rd, uint32_t rs1, int16_t imm16)
 {
-    jit_rr(0x04, rd, rs1, 0, off);
+    instr_t instr = (instr_t){ .instr = RI16(op, rd, rs1, imm16) };
+    vector_push(jit.code, instr);
+    jit.code_size++;
 }
 
-void jit_lbu(uint32_t rd, uint32_t rs1, int off)
+void jit_la(uint32_t rd, char* sym)
 {
-    jit_rr(0x05, rd, rs1, 0, off);
-}
-
-void jit_lh(uint32_t rd, uint32_t rs1, int off)
-{
-    jit_rr(0x06, rd, rs1, 0, off);
-}
-
-void jit_lhu(uint32_t rd, uint32_t rs1, int off)
-{
-    jit_rr(0x07, rd, rs1, 0, off);
-}
-
-void jit_lui(uint32_t rd, int16_t imm16)
-{
-    jit_ri16(0x08, rd, 0, imm16);
-}
-
-void jit_lw(uint32_t rd, uint32_t rs1, int off)
-{
-    jit_rr(0x09, rd, rs1, 0, off);
-}
-
-void jit_lwu(uint32_t rd, uint32_t rs1, int off)
-{
-    jit_rr(0x0a, rd, rs1, 0, off);
-}
-
-void jit_ld(uint32_t rd, uint32_t rs1, int off)
-{
-    jit_rr(0x0b, rd, rs1, 0, off);
-}
-
-void jit_la(uint32_t rd, char* name)
-{
-    jit_jump(0xff, rd, 0, name);
+    instr_t instr = (instr_t){ .op = 0xff, .rd = rd, .sym = sym };
+    vector_push(jit.code, instr);
+    jit.code_size += 2;
 }
 
 void jit_li(uint32_t rd, uint32_t imm)
 {
-    if ((imm >> 16) == 0) {
-        jit_ori(rd, 0, imm);
+    if (imm >> 16 == 0) {
+        jit_ri16(0x21, rd, 0, imm);
         return;
     }
 
-    jit_lui(1, imm >> 16);
-    jit_ori(rd, 1, imm & 0xffff);
+    jit_ri16(0x08, 1, 0, imm >> 16);
+    jit_ri16(0x21, rd, 1, imm & 0xffff);
 }
 
-void jit_sb(uint32_t rd, uint32_t rs1, int off)
+void jit_jump(uint32_t op, uint32_t rs1, uint32_t rs2, char* sym)
 {
-    jit_rr(0x0c, rd, rs1, 0, off);
+    instr_t instr = (instr_t){ .op = op, .rs1 = rs1, .rs2 = rs2, .sym = sym };
+    vector_push(jit.code, instr);
+    jit.code_size++;
 }
 
-void jit_sh(uint32_t rd, uint32_t rs1, int off)
+static size_t gen(uint32_t instr)
 {
-    jit_rr(0x0d, rd, rs1, 0, off);
+    return jit.text_size = buf_write_uint32(jit.text_buf, jit.text_size, instr);
 }
 
-void jit_sw(uint32_t rd, uint32_t rs1, int off)
-{
-    jit_rr(0x0e, rd, rs1, 0, off);
-}
-
-void jit_sd(uint32_t rd, uint32_t rs1, int off)
-{
-    jit_rr(0x0f, rd, rs1, 0, off);
-}
-
-void jit_mov(uint32_t rd, uint32_t rs1)
-{
-    jit_add(rd, rs1, 0);
-}
-
-void jit_mfhi(uint32_t rd)
-{
-    jit_rr(0x11, rd, 0, 0, 0);
-}
-
-void jit_mthi(uint32_t rs1)
-{
-    jit_rr(0x12, 0, rs1, 0, 0);
-}
-
-void jit_mflo(uint32_t rd)
-{
-    jit_rr(0x13, rd, 0, 0, 0);
-}
-
-void jit_mtlo(uint32_t rs1)
-{
-    jit_rr(0x14, 0, rs1, 0, 0);
-}
-
-void jit_slt(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x15, rd, rs1, rs2, 0);
-}
-
-void jit_sltu(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x16, rd, rs1, rs2, 0);
-}
-
-void jit_slti(uint32_t rd, uint32_t rs1, int16_t imm16)
-{
-    jit_ri16(0x17, rd, rs1, imm16);
-}
-
-void jit_sltiu(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x18, rd, rs1, imm16);
-}
-
-void jit_eq(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x19, rd, rs1, rs2, 0);
-}
-
-void jit_eqi(uint32_t rd, uint32_t rs1, int16_t imm16)
-{
-    jit_ri16(0x1a, rd, rs1, imm16);
-}
-
-void jit_eqiu(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x1b, rd, rs1, imm16);
-}
-
-void jit_or(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x20, rd, rs1, rs2, 0);
-}
-
-void jit_ori(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x21, rd, rs1, imm16);
-}
-
-void jit_and(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x22, rd, rs1, rs2, 0);
-}
-
-void jit_andi(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x23, rd, rs1, imm16);
-}
-
-void jit_xor(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x24, rd, rs1, rs2, 0);
-}
-
-void jit_xori(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x25, rd, rs1, imm16);
-}
-
-void jit_not(uint32_t rd, uint32_t rs1)
-{
-    jit_nor(rd, rs1, 0);
-}
-
-void jit_neg(uint32_t rd, uint32_t rs1)
-{
-    jit_sub(rd, 0, rs1);
-}
-
-void jit_nor(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x26, rd, rs1, rs2, 0);
-}
-
-void jit_shl(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x27, rd, rs1, rs2, 0);
-}
-
-void jit_shli(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x28, rd, rs1, imm16);
-}
-
-void jit_shr(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x29, rd, rs1, rs2, 0);
-}
-
-void jit_shri(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x2a, rd, rs1, imm16);
-}
-
-void jit_add(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x2b, rd, rs1, rs2, 0);
-}
-
-void jit_addi(uint32_t rd, uint32_t rs1, int16_t imm16)
-{
-    jit_ri16(0x2c, rd, rs1, imm16);
-}
-
-void jit_addiu(uint32_t rd, uint32_t rs1, uint16_t imm16)
-{
-    jit_ri16(0x2d, rd, rs1, imm16);
-}
-
-void jit_sub(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x2e, rd, rs1, rs2, 0);
-}
-
-void jit_subu(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x2f, rd, rs1, rs2, 0);
-}
-
-void jit_mul(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x30, 0, rs1, rs2, 0);
-    jit_mflo(rd);
-}
-
-void jit_mulu(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x31, 0, rs1, rs2, 0);
-    jit_mflo(rd);
-}
-
-void jit_div(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x32, 0, rs1, rs2, 0);
-    jit_mflo(rd);
-}
-
-void jit_divu(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x33, 0, rs1, rs2, 0);
-    jit_mflo(rd);
-}
-
-void jit_mod(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x32, 0, rs1, rs2, 0);
-    jit_mfhi(rd);
-}
-
-void jit_modu(uint32_t rd, uint32_t rs1, uint32_t rs2)
-{
-    jit_rr(0x33, 0, rs1, rs2, 0);
-    jit_mfhi(rd);
-}
-
-void jit_pushw(uint32_t rs1)
-{
-    jit_rr(0x36, 0, rs1, 0, 0);
-}
-
-void jit_push(uint32_t rs1)
-{
-    jit_rr(0x37, 0, rs1, 0, 0);
-}
-
-void jit_popw(uint32_t rd)
-{
-    jit_rr(0x38, rd, 0, 0, 0);
-}
-
-void jit_pop(uint32_t rd)
-{
-    jit_rr(0x39, rd, 0, 0, 0);
-}
-
-void jit_call(char* label)
-{
-    jit_jump(0x3a, 0, 0, label);
-}
-
-void jit_ret(void)
-{
-    jit_rr(0x3b, 0, 0, 0, 0);
-}
-
-void jit_j(char* label)
-{
-    jit_jump(0x3c, 0, 0, label);
-}
-
-void jit_jr(uint32_t rs1)
-{
-    jit_rr(0x3d, rs1, 0, 0, 0);
-}
-
-void jit_je(uint32_t rs1, uint32_t rs2, char* label)
-{
-    jit_jump(0x3e, rs1, rs2, label);
-}
-
-void jit_jne(uint32_t rs1, uint32_t rs2, char* label)
-{
-    jit_jump(0x3f, rs1, rs2, label);
-}
-
-void jit_run()
+static void jit_gen(void)
 {
     jit_utils();
 
+    // debug symbols
     if (jit.debug) {
-        cpu.text_syms = malloc(vector_length(jit.code) * sizeof(*cpu.text_syms));
-        if (cpu.text_syms == NULL) {
-            perror("jit_run.setup_symbols");
+        jit.cpu.text_syms = malloc(jit.code_size * sizeof(char*));
+        if (jit.cpu.text_syms == NULL) {
+            perror("jit_run.debug_symbols");
             exit(-1);
         }
-
-        vector_iter(label_t, label, jit.labels)
+        vector_iter(sym_t, label, jit.text_syms)
         {
-            cpu.text_syms[label->addr] = label->name;
+            jit.cpu.text_syms[label->addr] = label->name;
         }
     }
 
-    size_t addr = 0;
-    int    mapped;
-
-    cpu.data = jit.data_seg->bytes;
-
-    // generate text segment
-    addr = 0;
-    vector_iter(instr_t, ir, jit.code)
+    // gen text segment
+    vector_iter(instr_t, instr, jit.code)
     {
-        if (ir->label) {
+        if (instr->sym != NULL) {
             int found = 0;
-            vector_iter(label_t, label, jit.labels)
+            vector_iter(sym_t, label, jit.text_syms)
             {
-                if (strcmp(ir->label, label->name) == 0) {
-                    switch (ir->op) {
+                if (strcmp(instr->sym, label->name) == 0) {
+                    found++;
+                    switch (instr->op) {
                     case 0x3a: /* call */
                     case 0x3c: /* j */
-                        cpu.text[addr++] = I24(ir->op, label->addr);
+                        gen(I24(instr->op, label->addr));
                         break;
                     case 0x3d: /* jr */
                     case 0x3e: /* je */
                     case 0x3f: /* jne */
-                        cpu.text[addr++] = RI16(ir->op, ir->rs1, ir->rs2, label->addr);
+                        gen(RI16(instr->op, instr->rs1, instr->rs2, label->addr));
                         break;
                     case 0xff: /* la */
-                        mapped = label->addr;
-                        if (mapped >> 16 > 0) {
-                            cpu.text[addr++] = RI16(0x08, at, 0, mapped >> 16);
+                        if (label->addr >> 16 != 0) {
+                            gen(RI16(0x08, at, 0, label->addr >> 16));
+                            gen(RI16(0x21, instr->rs1, at, label->addr & 0xffff));
+                        } else {
+                            gen(0x0);
+                            gen(RI16(0x21, instr->rs1, at, label->addr & 0xffff));
                         }
-                        cpu.text[addr++] = RI16(0x21, ir->rs1, at, mapped);
                         break;
-                    default:
-                        jit_errorf("unknown symbol '%s' referenced in instruction 0x%X", ir->label, ir->op);
-                        jit.error++;
                     }
-
-                    found++;
                     break;
                 }
             }
 
-            if (ir->op == 0xff) {
-                vector_iter(sym_t, sym, jit.data_syms)
-                {
-                    if (strcmp(ir->label, sym->name) == 0) {
-                        mapped = sizeof(cpu.text) + sym->addr;
-                        cpu.text[addr++] = RI16(0x08, at, 0, mapped >> 16);
-                        cpu.text[addr++] = RI16(0x21, ir->rs1, at, mapped);
-                        found++;
-                        break;
+            if (!found) {
+                if (instr->op == 0xff) {
+                    vector_iter(sym_t, sym, jit.data_syms)
+                    {
+                        if (strcmp(instr->sym, sym->name) == 0) {
+                            uint64_t addr = jit.code_size * 4 + sym->addr;
+                            if (sym->addr >> 16 != 0) {
+                                gen(RI16(0x08, at, 0, addr >> 16));
+                                gen(RI16(0x21, instr->rs1, at, addr & 0xffff));
+                            } else {
+                                gen(0x0);
+                                gen(RI16(0x21, instr->rs1, at, addr & 0xffff));
+                            }
+                            found++;
+                            break;
+                        }
                     }
                 }
             }
 
             if (!found) {
-                jit_errorf("reference to undefined symbol '%s'", ir->label);
-                jit.error++;
+                jit_errorf("unknown symbol '%s' referenced in instruction 0x%X", instr->sym, instr->op);
             }
         } else {
-            cpu.text[addr++] = ir->instr;
+            gen(instr->instr);
         }
     }
 
-    cpu.debug = jit.debug;
-    cpu_exec(&cpu);
+    disasm(&jit.cpu, stdout, (uint32_t*)jit.text_buf->bytes, jit.text_size / 4);
+
+    cpu_text(&jit.cpu, jit.text_buf->bytes, jit.text_size);
+    cpu_data(&jit.cpu, jit.data_buf->bytes, jit.data_size);
+
+    vector_free(jit.text_syms);
+    vector_free(jit.data_syms);
+    buf_free(&jit.text_buf);
+    buf_free(&jit.data_buf);
 }

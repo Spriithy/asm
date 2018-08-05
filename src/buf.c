@@ -43,6 +43,11 @@ buf_t* buf_from(uint8_t* data, size_t len)
     return buf;
 }
 
+void* buf_read(buf_t* buf, size_t at)
+{
+    return buf->bytes + at;
+}
+
 uint8_t buf_read_uint8(buf_t* buf, size_t at)
 {
     return buf->bytes[at];
@@ -50,28 +55,22 @@ uint8_t buf_read_uint8(buf_t* buf, size_t at)
 
 uint16_t buf_read_uint16(buf_t* buf, size_t at)
 {
-    uint16_t hi = buf_read(buf, at);
-    uint16_t lo = buf_read(buf, at + 1);
-    return hi << 8 | lo;
+    return *(uint16_t*)(buf->bytes + at);
 }
 
 uint32_t buf_read_uint32(buf_t* buf, size_t at)
 {
-    uint32_t hi = buf_read_uint16(buf, at);
-    uint32_t lo = buf_read_uint16(buf, at + 2);
-    return hi << 16 | lo;
+    return *(uint32_t*)(buf->bytes + at);
 }
 
 uint64_t buf_read_uint64(buf_t* buf, size_t at)
 {
-    uint64_t hi = buf_read_uint32(buf, at);
-    uint64_t lo = buf_read_uint32(buf, at + 4);
-    return hi << 32 | lo;
+    return *(uint64_t*)(buf->bytes + at);
 }
 
 char* buf_read_str(buf_t* buf, size_t at)
 {
-    return (char*)buf->bytes + at;
+    return (char*)(buf->bytes + at);
 }
 
 size_t buf_memcpy(buf_t* buf, size_t at, uint8_t* src, size_t len)
@@ -81,6 +80,11 @@ size_t buf_memcpy(buf_t* buf, size_t at, uint8_t* src, size_t len)
     }
     memcpy(buf->bytes + at, src, len);
     return at + len;
+}
+
+size_t buf_write(buf_t* buf, size_t at, void* x, size_t size)
+{
+    return buf_memcpy(buf, at, (uint8_t*)x, size);
 }
 
 size_t buf_write_uint8(buf_t* buf, size_t at, uint8_t x)
@@ -97,9 +101,8 @@ size_t buf_write_uint16(buf_t* buf, size_t at, uint16_t x)
     if (!buf_fits(buf, at, sizeof(x))) {
         buf_grow(buf, buf->cap + sizeof(x));
     }
-    at = buf_write(buf, at, ((x >> 8) & 0xff));
-    at = buf_write(buf, at, ((x >> 0) & 0xff));
-    return at;
+    *(uint16_t*)(buf->bytes + at) = x;
+    return at + 2;
 }
 
 size_t buf_write_uint32(buf_t* buf, size_t at, uint32_t x)
@@ -107,9 +110,8 @@ size_t buf_write_uint32(buf_t* buf, size_t at, uint32_t x)
     if (!buf_fits(buf, at, sizeof(x))) {
         buf_grow(buf, buf->cap + sizeof(x));
     }
-    at = buf_write_uint16(buf, at, ((x >> 16) & 0xffff));
-    at = buf_write_uint16(buf, at, ((x >> 0) & 0xffff));
-    return at;
+    *(uint32_t*)(buf->bytes + at) = x;
+    return at + 4;
 }
 
 size_t buf_write_uint64(buf_t* buf, size_t at, uint64_t x)
@@ -117,9 +119,8 @@ size_t buf_write_uint64(buf_t* buf, size_t at, uint64_t x)
     if (!buf_fits(buf, at, sizeof(x))) {
         buf_grow(buf, buf->cap + sizeof(x));
     }
-    at = buf_write_uint32(buf, at, ((x >> 32) & 0xffffffff));
-    at = buf_write_uint32(buf, at, ((x >> 0) & 0xffffffff));
-    return at;
+    *(uint64_t*)(buf->bytes + at) = x;
+    return at + 8;
 }
 
 size_t buf_write_str(buf_t* buf, size_t at, char* str)

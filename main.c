@@ -9,9 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern jit_t     jit;
-extern scanner_t scan;
-
 int main(int argc, char** argv)
 {
     int   debug = 0;
