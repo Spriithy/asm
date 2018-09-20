@@ -8,7 +8,7 @@
 #define RD DECODE_RD(code[i])
 #define RS1 DECODE_RS1(code[i])
 #define RS2 DECODE_RS2(code[i])
-#define OFFSET DECODE_OFFSET(code[i])
+#define OFFSET DECODE_OFFSET((int)code[i])
 #define I16 DECODE_I16(code[i])
 #define I24 DECODE_I24(code[i])
 
