@@ -1,8 +1,8 @@
 #include "parser.h"
-#include "../disasm.h"
-#include "../intern.h"
-#include "../jit.h"
-#include "../vector.h"
+#include "../shared/disasm.h"
+#include "../shared/intern.h"
+#include "../shared/vector.h"
+#include "jit.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>

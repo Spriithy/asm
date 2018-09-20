@@ -1,6 +1,6 @@
 #include "disasm.h"
+#include "../emu/exec.h"
 #include "decode.h"
-#include "exec/exec.h"
 #include "intern.h"
 #include <string.h>
 

@@ -1,7 +1,7 @@
 #ifndef EMU64_DISASM_H
 #define EMU64_DISASM_H
 
-#include "exec/exec.h"
+#include "../emu/exec.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

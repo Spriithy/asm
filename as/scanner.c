@@ -1,7 +1,7 @@
 #include "scanner.h"
-#include "../disasm.h"
-#include "../intern.h"
-#include "../vector.h"
+#include "../shared/disasm.h"
+#include "../shared/intern.h"
+#include "../shared/vector.h"
 #include <ctype.h>
 #include <limits.h>
 #include <stdlib.h>

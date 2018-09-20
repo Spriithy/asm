@@ -1,5 +1,5 @@
-#include "../disasm.h"
-#include "../intern.h"
+#include "../shared/disasm.h"
+#include "../shared/intern.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     char* out_file = NULL;
 
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--raw") == 0 || strcmp(argv[i], "-r")) {
+        if (strcmp(argv[i], "--raw") == 0 || strcmp(argv[i], "-r") == 0) {
             raw = 1;
         } else if (in_file == NULL) {
             in_file = argv[i];

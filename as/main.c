@@ -1,10 +1,9 @@
-#include "src/buf.h"
-#include "src/compiler/parser.h"
-#include "src/error.h"
-#include "src/exec/exec.h"
-#include "src/intern.h"
-#include "src/jit.h"
-#include "src/vector.h"
+#include "../emu/exec.h"
+#include "../shared/buf.h"
+#include "../shared/error.h"
+#include "../shared/intern.h"
+#include "../shared/vector.h"
+#include "parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,13 +24,13 @@ int main(int argc, char** argv)
     }
 
     if (in_file != NULL) {
-        jit_init();
+        /*   jit_init();
         jit_set_debug(debug);
         parser_t* pars = parser_init(in_file);
         parser_set_debug(pars, debug);
         parse(pars);
         parser_delete(pars);
-        jit_run();
+        jit_run();*/
     } else {
         printf("error: no input file\n");
         free_interns();
@@ -39,6 +38,5 @@ int main(int argc, char** argv)
     }
 
     free_interns();
-
-    return 0;
+    exit(0);
 }

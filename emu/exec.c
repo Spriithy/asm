@@ -1,6 +1,6 @@
 #include "exec.h"
-#include "../disasm.h"
-#include "../maths.h"
+#include "../shared/disasm.h"
+#include "../shared/maths.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

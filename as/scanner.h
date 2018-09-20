@@ -1,7 +1,7 @@
 #ifndef EMU64_COMPILER_SCANNER_H
 #define EMU64_COMPILER_SCANNER_H
 
-#include "../error.h"
+#include "../shared/error.h"
 #include "token.h"
 #include <stddef.h>
 #include <stdio.h>

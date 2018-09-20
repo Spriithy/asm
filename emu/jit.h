@@ -1,8 +1,8 @@
 #ifndef EMU64_JIT_H
 #define EMU64_JIT_H
 
-#include "buf.h"
-#include "exec/exec.h"
+#include "../emu/exec.h"
+#include "../shared/buf.h"
 #include <stddef.h>
 #include <stdint.h>
 

@@ -1,5 +1,5 @@
 #include "token.h"
-#include "../intern.h"
+#include "../shared/intern.h"
 #include <stdio.h>
 
 char* token_kind_names[] = {
