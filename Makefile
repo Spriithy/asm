@@ -2,16 +2,16 @@ NAME=emu-64
 CC=clang
 CFLAGS=-Wall -Wextra -Werror -Wno-unused-variable -std=c11 -g 
 
-SHARED_SRC=$(wildcard shared/*.c) $(wildcard shared/**/*.c)
+SHARED_SRC=$(wildcard src/shared/*.c) $(wildcard src/shared/**/*.c)
 SHARED_OBJ=$(patsubst %.c, %.o, $(SHARED_SRC))
 
-EMU_SRC=$(wildcard emu/*.c) $(wildcard emu/**/*.c)
+EMU_SRC=$(wildcard src/emu/*.c) $(wildcard src/emu/**/*.c)
 EMU_OBJ=$(patsubst %.c, %.o, $(EMU_SRC))
 
-AS_SRC=$(wildcard as/*.c) $(wildcard as/**/*.c)
+AS_SRC=$(wildcard src/as/*.c) $(wildcard src/as/**/*.c)
 AS_OBJ=$(patsubst %.c, %.o, $(AS_SRC))
 
-DISAS_SRC=$(wildcard disas/*.c) $(wildcard disas/**/*.c)
+DISAS_SRC=$(wildcard src/disas/*.c) $(wildcard src/disas/**/*.c)
 DISAS_OBJ=$(patsubst %.c, %.o, $(DISAS_SRC))
 
 all: emu as disas
