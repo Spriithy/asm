@@ -35,11 +35,6 @@ enum {
 
 #define RDATA_SIZE (0x10000)
 
-static inline uint64_t sign_extend(uint64_t data, int width)
-{
-    return (int64_t)(data << (sizeof(data) - width)) >> (sizeof(data) - width);
-}
-
 static inline int decode_op(uint32_t word)
 {
     return (int)(word & 0x3f);
@@ -70,17 +65,17 @@ static inline int decode_offset(uint32_t word)
 
 static inline unsigned int decode_imm16_unsigned(uint32_t word)
 {
-    return (unsigned int)(word >> 16);
+    return word >> 16;
 }
 
 static inline int decode_imm16_signed(uint32_t word)
 {
-    return (int)(int16_t)(word >> 16);
+    return (int)word >> 16;
 }
 
 static inline int decode_imm24(uint32_t word)
 {
-    return word >> 8;
+    return (int)word >> 8;
 }
 
 static inline void error(char* message)
