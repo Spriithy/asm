@@ -65,7 +65,7 @@ static inline int decode_rs2(uint32_t word)
 
 static inline int decode_offset(uint32_t word)
 {
-    return (int)(sign_extend(word >> 24, 8));
+    return ((int)word >> 21) ^ (1 << 10) - (1 << 10);
 }
 
 static inline unsigned int decode_imm16_unsigned(uint32_t word)
