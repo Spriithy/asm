@@ -2,7 +2,7 @@
 #define EMU64_JIT_H
 
 #include "buf.h"
-#include "run/cpu.h"
+#include "exec/exec.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,17 +18,18 @@ typedef struct {
 } sym_t;
 
 typedef struct {
-    instr_t* code;
-    size_t   code_size;
-    buf_t*   data_buf;
-    size_t   data_size;
-    sym_t*   data_syms;
-    buf_t*   text_buf;
-    size_t   text_size;
-    sym_t*   text_syms;
-    size_t   error;
-    int      debug;
-    cpu_t    cpu;
+    instr_t*  code;
+    size_t    code_size;
+    buf_t*    data_buf;
+    size_t    data_size;
+    sym_t*    data_syms;
+    buf_t*    text_buf;
+    size_t    text_size;
+    sym_t*    text_syms;
+    size_t    error;
+    int       debug;
+    program_t prog;
+    core_t    core;
 } jit_t;
 
 void jit_init(void);
@@ -45,14 +46,14 @@ void jit_jump(uint32_t op, uint32_t rs1, uint32_t rs2, char* sym);
 void jit_la(uint32_t rd, char* sym);
 
 #define jit_utils()                                                                             \
-    int zero = 0;                                                                               \
-    int at = 1;                                                                                 \
-    int v0 = 2, v1 = 3;                                                                         \
-    int a0 = 4, a1 = 5, a2 = 6, a3 = 7;                                                         \
-    int t0 = 8, t1 = 9, t2 = 10, t3 = 11, t4 = 12, t5 = 13, t6 = 14, t7 = 15, t8 = 24, t9 = 25; \
-    int s0 = 16, s1 = 17, s2 = 18, s3 = 19, s4 = 20, s5 = 21, s6 = 22, s7 = 23;                 \
-    int k0 = 26, k1 = 27;                                                                       \
-    int gp = 28, sp = 29, fp = 30;                                                              \
-    int ra = 31
+    int ZERO = 0;                                                                               \
+    int AT = 1;                                                                                 \
+    int V0 = 2, V1 = 3;                                                                         \
+    int A0 = 4, A1 = 5, A2 = 6, A3 = 7;                                                         \
+    int T0 = 8, T1 = 9, T2 = 10, T3 = 11, T4 = 12, T5 = 13, T6 = 14, T7 = 15, T8 = 24, T9 = 25; \
+    int S0 = 16, S1 = 17, S2 = 18, S3 = 19, S4 = 20, S5 = 21, S6 = 22, S7 = 23;                 \
+    int K0 = 26, K1 = 27;                                                                       \
+    int GP = 28, SP = 29, FP = 30;                                                              \
+    int RA = 31
 
 #endif // jit.h

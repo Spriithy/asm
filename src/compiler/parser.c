@@ -31,12 +31,12 @@ parser_t* parser_init(char* file_name)
 
     jit_utils();
 
-    jit_ri16(0x2c, a0, 0, 0); // argc
-    jit_ri16(0x2c, a1, 0, 0); // argv
+    jit_ri16(0x2c, A0, 0, 0); // argc
+    jit_ri16(0x2c, A1, 0, 0); // argv
     jit_basic(0x02); // breakpoint
     jit_jump(0x3a, 0, 0, "main"); // call main
-    jit_rr(0x2b, a1, v0, 0, 0); // mov a1, v0
-    jit_ri16(0x2c, a0, 0, 0x0a); // addi a0, zero, EXIT
+    jit_rr(0x2b, A1, V0, 0, 0); // mov a1, v0
+    jit_ri16(0x2c, A0, 0, 0x0a); // addi a0, zero, EXIT
     jit_basic(0x01); // int
 
     fwd();

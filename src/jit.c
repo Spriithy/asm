@@ -1,6 +1,6 @@
 #include "jit.h"
 #include "disasm.h"
-#include "run/cpu.h"
+#include "exec/exec.h"
 #include "vector.h"
 #include <ctype.h>
 #include <stdint.h>
@@ -50,7 +50,6 @@ static void jit_gen(void);
 
 void jit_init(void)
 {
-    cpu_init(&jit.cpu);
     jit_set_debug(0);
     jit.text_buf = buf_alloc(1024);
     jit.text_size = 0;
@@ -63,14 +62,14 @@ void jit_run(void)
 {
     jit_gen();
     if (jit.error == 0) {
-        cpu_exec(&jit.cpu);
+        core_exec(&jit.core);
     }
 }
 
 void jit_set_debug(int debug)
 {
     jit.debug = debug;
-    jit.cpu.debug = debug;
+    jit.core.debug = debug;
 }
 
 void jit_data(char* name, uint8_t* data, size_t data_size)
@@ -170,14 +169,14 @@ static void jit_gen(void)
 
     // debug symbols
     if (jit.debug) {
-        jit.cpu.text_syms = malloc(jit.code_size * sizeof(char*));
-        if (jit.cpu.text_syms == NULL) {
+        jit.core.syms = malloc(jit.code_size * sizeof(char*));
+        if (jit.core.syms == NULL) {
             perror("jit_run.debug_symbols");
             exit(-1);
         }
         vector_iter(sym_t, label, jit.text_syms)
         {
-            jit.cpu.text_syms[label->addr] = label->name;
+            jit.core.syms[label->addr] = label->name;
         }
     }
 
@@ -202,11 +201,11 @@ static void jit_gen(void)
                         break;
                     case 0xff: /* la */
                         if (label->addr >> 16 != 0) {
-                            gen(RI16(0x08, at, 0, label->addr >> 16));
-                            gen(RI16(0x21, instr->rs1, at, label->addr & 0xffff));
+                            gen(RI16(0x08, AT, 0, label->addr >> 16));
+                            gen(RI16(0x21, instr->rd, AT, label->addr & 0xffff));
                         } else {
                             gen(0x0);
-                            gen(RI16(0x21, instr->rs1, at, label->addr & 0xffff));
+                            gen(RI16(0x21, instr->rd, ZERO, label->addr & 0xffff));
                         }
                         break;
                     }
@@ -221,11 +220,11 @@ static void jit_gen(void)
                         if (strcmp(instr->sym, sym->name) == 0) {
                             uint64_t addr = jit.code_size * 4 + sym->addr;
                             if (sym->addr >> 16 != 0) {
-                                gen(RI16(0x08, at, 0, addr >> 16));
-                                gen(RI16(0x21, instr->rs1, at, addr & 0xffff));
+                                gen(RI16(0x08, AT, 0, addr >> 16));
+                                gen(RI16(0x21, instr->rd, AT, addr & 0xffff));
                             } else {
                                 gen(0x0);
-                                gen(RI16(0x21, instr->rs1, at, addr & 0xffff));
+                                gen(RI16(0x21, instr->rd, ZERO, addr & 0xffff));
                             }
                             found++;
                             break;
@@ -242,13 +241,25 @@ static void jit_gen(void)
         }
     }
 
-    disasm(&jit.cpu, stdout, (uint32_t*)jit.text_buf->bytes, jit.text_size / 4);
+    disasm(&jit.core, stdout, (uint32_t*)jit.text_buf->bytes, jit.text_size / 4);
 
-    cpu_text(&jit.cpu, jit.text_buf->bytes, jit.text_size);
-    cpu_data(&jit.cpu, jit.data_buf->bytes, jit.data_size);
+    size_t static_size = jit.text_size + jit.data_size;
+    buf_t* buf = buf_alloc(static_size);
+    jit.prog.bytes = buf->bytes;
+
+    size_t offs = 0;
+    offs = buf_memcpy(buf, 0, jit.text_buf->bytes, jit.text_size);
+    buf_memcpy(buf, offs, jit.data_buf->bytes, jit.data_size);
+
+    jit.prog.text_size = jit.text_size;
+    jit.prog.data_size = jit.data_size;
+    jit.prog.rdata_size = 0;
+
+    core_load(&jit.core, &jit.prog);
 
     vector_free(jit.text_syms);
     vector_free(jit.data_syms);
     buf_free(&jit.text_buf);
     buf_free(&jit.data_buf);
+    buf_free(&buf);
 }

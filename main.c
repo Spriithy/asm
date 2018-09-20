@@ -1,9 +1,9 @@
 #include "src/buf.h"
 #include "src/compiler/parser.h"
 #include "src/error.h"
+#include "src/exec/exec.h"
 #include "src/intern.h"
 #include "src/jit.h"
-#include "src/run/cpu.h"
 #include "src/vector.h"
 #include <stdio.h>
 #include <stdlib.h>
