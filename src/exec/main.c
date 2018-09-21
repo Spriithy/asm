@@ -1,3 +1,4 @@
+#include "../shared/cargs.h"
 #include "../shared/disasm.h"
 #include "core.h"
 #include <stdio.h>
@@ -10,74 +11,16 @@ config_t config = {
     .input_file = NULL,
 };
 
-static int is_option(char* str, char* lopt, char* sopt)
-{
-    if (sopt != NULL) {
-        return strcmp(str, lopt) == 0 || strcmp(str, sopt) == 0;
-    }
-    return strcmp(str, lopt);
-}
-
-static int starts_with(char* pre, const char* str)
-{
-    size_t lpre = strlen(pre),
-           lstr = strlen(str);
-    return lstr < lpre ? false : strncmp(pre, str, lpre) == 0;
-}
-
-static int is_assignable_option(char* str, char* lopt, char* sopt)
-{
-    int len = 0;
-
-    if (sopt != NULL) {
-        if (starts_with(lopt, str)) {
-            len = strlen(lopt);
-        } else if (starts_with(sopt, str)) {
-            len = strlen(sopt);
-        }
-
-        return len;
-    }
-
-    if (starts_with(lopt, str)) {
-        len = strlen(lopt);
-    }
-
-    return len;
-}
-
 int main(int argc, char** argv)
 {
-    for (int i = 1; i < argc; i++) {
-        if (is_option(argv[i], "--XDebug", "-D")) {
-            config.debug = 1;
-            continue;
-        }
+    register_arg(TYPE_FLAG, "--XDebug", "-D", &config.debug, NULL);
+    register_arg(TYPE_INT, "--XMemSize", NULL, &config.memory_size, NULL);
+    register_arg(TYPE_STRING, "--", "-", &config.input_file, NULL);
+    parse_args(argc, argv);
 
-        size_t len = 0;
-        if ((len = is_assignable_option(argv[i], "--XMemSize=", NULL))) {
-            if (len == strlen(argv[i])) {
-                printf("error: missing XMemSize value\n");
-                exit(-1);
-            }
-
-            char* value = argv[i] + len;
-            int   memory_size = atoi(value);
-            if (memory_size == 0 && value[0] != '0') {
-                printf("error: XMemSize expects an integer value %s\n", value);
-                exit(-1);
-            } else if (memory_size <= 0) {
-                printf("error: XMemSize expects a positive integer (got %s).\n", value);
-                exit(-1);
-            }
-
-            config.memory_size = memory_size;
-            continue;
-        }
-
-        if (config.input_file == NULL) {
-            config.input_file = argv[i];
-        }
+    if (config.memory_size <= 0) {
+        printf("error: XMemSize expects a positive integer (got %zu).\n", config.memory_size);
+        exit(-1);
     }
 
     if (config.input_file == NULL) {
