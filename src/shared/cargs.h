@@ -16,7 +16,7 @@ typedef struct {
     void*  dest;
 } arg_t;
 
-void parse_args(int argc, char** argv);
+int  parse_args(int argc, char** argv);
 void register_arg(type_t type, char* name, char* alt, void* dest, char* desc);
 
 #endif // cargs.h

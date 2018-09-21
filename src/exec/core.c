@@ -1,7 +1,7 @@
 #include "core.h"
 #include "../shared/disasm.h"
 #include "../shared/icode.h"
-#include "../shared/maths.h"
+#include "maths.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
