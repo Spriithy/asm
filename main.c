@@ -1,3 +1,4 @@
+#include "src/shared/icode.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,28 +13,29 @@
 int main(void)
 {
     uint32_t code[] = {
-        RR(0x04, 2, 2, 0, -1024),
-        RR(0x0c, 2, 2, 0, 1023),
-        RI16(0x2c, 4, 0, 0), // argc
-        RI16(0x2c, 5, 0, 0), // argv
-        OP32(0x02), // breakpoint
-        I24(0x3a, 0xffff), // call main
-        RR(0x2b, 5, 2, 0, 0), // mov a1, v0
-        RI16(0x2c, 4, 0, 0x0a), // addi a0, zero, EXIT
-        OP32(0x01), // int
+        RI16(_ADDI, 4, 0, 0), // argc
+        RI16(_ADDI, 5, 0, 0), // argv
+        OP32(_BREAKPOINT), // breakpoint
+        //I24(0x3a, 0xffff), // call main
+        RI16(_ADDI, 2, 0, 1),
+        RR(_ADD, 5, 2, 0, 0), // mov a1, v0
+        RI16(_ADDI, 4, 0, 0x0a), // addi a0, zero, EXIT
+        OP32(_INTERRUPT), // int
     };
 
-    FILE* f = fopen("raw.esf.bin", "w+");
+    FILE* f = fopen("raw.esf.bin", "wb+");
     if (f == NULL)
         exit(-1);
 
     size_t hdr_magic = 0x6865787944414e4f;
     size_t data_size = 0;
     size_t text_size = sizeof(code);
+    //char   has_debug_syms = 0;
 
-    fwrite(&hdr_magic, sizeof(hdr_magic), 1, f);
-    fwrite(&text_size, sizeof(text_size), 1, f);
-    fwrite(&data_size, sizeof(data_size), 1, f);
+    //fwrite(&has_debug_syms, sizeof(char), 1, f);
+    fwrite(&hdr_magic, sizeof(size_t), 1, f);
+    fwrite(&text_size, sizeof(size_t), 1, f);
+    fwrite(&data_size, sizeof(size_t), 1, f);
     fwrite(code, sizeof(code[0]), text_size / sizeof(code[0]), f);
 
     fclose(f);

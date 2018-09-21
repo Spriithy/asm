@@ -15,12 +15,19 @@ typedef struct {
 extern config_t config;
 
 typedef struct {
+    uint8_t*  mem;
     uint32_t* seg_text;
     uint8_t*  seg_data;
     size_t    text_size;
     size_t    data_size;
+
+    uint64_t pc, hi, lo;
+    uint64_t reg[32];
+
+    int step;
 } core_t;
 
-int load_file(core_t* core, FILE* input_file);
+int  load_file(core_t* core, FILE* input_file);
+void core_exec(core_t* core);
 
 #endif // exec/core.h

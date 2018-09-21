@@ -2,7 +2,7 @@
 #define SHARED_ICODE_H
 
 enum {
-    _UNDEF_0,
+    _NOP,
     _INTERRUPT,
     _BREAKPOINT,
     _UNDEF_3,

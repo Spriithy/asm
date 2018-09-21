@@ -92,12 +92,10 @@ int main(int argc, char** argv)
     }
 
     core_t core;
-
     load_file(&core, input_file);
-
-    disasm(NULL, stdout, core.seg_text, core.text_size);
-
     fclose(input_file);
+
+    core_exec(&core);
 
     exit(0);
 }

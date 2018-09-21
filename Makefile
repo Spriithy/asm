@@ -14,7 +14,7 @@ AS_OBJ=$(patsubst %.c, %.o, $(AS_SRC))
 DISAS_SRC=$(wildcard src/disas/*.c) $(wildcard src/disas/**/*.c)
 DISAS_OBJ=$(patsubst %.c, %.o, $(DISAS_SRC))
 
-all: emu as disas
+all: exec as disas
 
 exec: $(SHARED_OBJ) $(EXEC_OBJ)
 	$(CC) $(CFLAGS) $(SHARED_OBJ) $(EXEC_OBJ) -o $(NAME)

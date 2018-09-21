@@ -41,24 +41,27 @@ int load_file(core_t* core, FILE* input_file)
     // read segment sizes
     load_segment_sizes(core, input_file);
 
-    size_t data_size = core->data_size;
     size_t text_size = core->text_size;
+    size_t data_size = core->data_size;
 
-    core->seg_text = malloc(data_size + text_size);
-    if (core->seg_text == NULL) {
+    if (config.memory_size <= 2 * (text_size + data_size)) {
+        printf("error: insufficient memory (use --XMemSize and use a greater value).\n");
+        return 0;
+    }
+
+    core->mem = malloc(config.memory_size);
+    if (core->mem == NULL) {
         printf("error: not enough memory\n");
         return 0;
     }
 
     // read text segment
-    fread(core->seg_text, 1, text_size, input_file);
+    core->seg_text = (uint32_t*)core->mem;
+    fread(core->mem, 1, text_size, input_file);
 
-    // read text segment
-    fread(core->seg_text + text_size, 1, data_size, input_file);
-    core->seg_data = (uint8_t*)(core->seg_text + text_size);
-
-    // adjust text size to number of instructions instead
-    core->text_size /= 4;
+    // read data segment
+    core->seg_data = core->mem + text_size;
+    fread(core->seg_data, 1, data_size, input_file);
 
     return 1;
 }
