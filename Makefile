@@ -5,8 +5,8 @@ CFLAGS=-Wall -Wextra -Werror -Wno-unused-variable -std=c11 -g
 SHARED_SRC=$(wildcard src/shared/*.c) $(wildcard src/shared/**/*.c)
 SHARED_OBJ=$(patsubst %.c, %.o, $(SHARED_SRC))
 
-EMU_SRC=$(wildcard src/emu/*.c) $(wildcard src/emu/**/*.c)
-EMU_OBJ=$(patsubst %.c, %.o, $(EMU_SRC))
+EXEC_SRC=$(wildcard src/exec/*.c) $(wildcard src/exec/**/*.c)
+EXEC_OBJ=$(patsubst %.c, %.o, $(EXEC_SRC))
 
 AS_SRC=$(wildcard src/as/*.c) $(wildcard src/as/**/*.c)
 AS_OBJ=$(patsubst %.c, %.o, $(AS_SRC))
@@ -16,9 +16,9 @@ DISAS_OBJ=$(patsubst %.c, %.o, $(DISAS_SRC))
 
 all: emu as disas
 
-emu: $(SHARED_OBJ) $(EMU_OBJ)
-	$(CC) $(CFLAGS) $(SHARED_OBJ) $(EMU_OBJ) -o $(NAME)
-	rm -f $(SHARED_OBJ) $(EMU_OBJ)
+exec: $(SHARED_OBJ) $(EXEC_OBJ)
+	$(CC) $(CFLAGS) $(SHARED_OBJ) $(EXEC_OBJ) -o $(NAME)
+	rm -f $(SHARED_OBJ) $(EXEC_OBJ)
 
 as: $(SHARED_OBJ) $(AS_OBJ)
 	$(CC) $(CFLAGS) $(SHARED_OBJ) $(AS_OBJ) -o $(NAME)-as

@@ -1,4 +1,4 @@
-#include "../emu/exec.h"
+#include "../exec/exec.h"
 #include "../shared/buf.h"
 #include "../shared/error.h"
 #include "../shared/intern.h"

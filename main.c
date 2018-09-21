@@ -27,7 +27,20 @@ int main(void)
     if (f == NULL)
         exit(-1);
 
-    fwrite(code, sizeof(code[0]), sizeof(code) / sizeof(code[0]), f);
+    size_t hdr_magic = 0x6865787944414e4f;
+    size_t data_size = 0;
+    size_t text_size = sizeof(code);
+
+    fwrite(&hdr_magic, sizeof(hdr_magic), 1, f);
+    fwrite(&data_size, sizeof(data_size), 1, f);
+    fwrite(&text_size, sizeof(text_size), 1, f);
+    fwrite(code, sizeof(code[0]), text_size / sizeof(code[0]), f);
 
     fclose(f);
+
+    /*
+        84 10 80 ff 8c 10 80 ff 2c 01 00 00 6c 01 00 00
+        02 00 00 00 3a ff ff 00 6b 11 00 00 2c 01 0a 00
+        01 00 00 00                                    
+    */
 }

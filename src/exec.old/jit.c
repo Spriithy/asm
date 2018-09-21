@@ -1,7 +1,7 @@
 #include "jit.h"
-#include "../emu/exec.h"
 #include "../shared/disasm.h"
 #include "../shared/vector.h"
+#include "exec.h"
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
