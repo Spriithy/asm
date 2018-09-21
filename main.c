@@ -32,8 +32,8 @@ int main(void)
     size_t text_size = sizeof(code);
 
     fwrite(&hdr_magic, sizeof(hdr_magic), 1, f);
-    fwrite(&data_size, sizeof(data_size), 1, f);
     fwrite(&text_size, sizeof(text_size), 1, f);
+    fwrite(&data_size, sizeof(data_size), 1, f);
     fwrite(code, sizeof(code[0]), text_size / sizeof(code[0]), f);
 
     fclose(f);

@@ -451,6 +451,7 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
             fprintf(f, "sd    %s, %d(%s)\n", reg_name(RD), OFFSET, reg_name(RS1));
             break;
 
+        // XXX
         case 0x10: /* mov %reg_name(RD), %RS1 */
             fprintf(f, "mov   %s, %s\n", reg_name(RD), reg_name(RS1));
             break;

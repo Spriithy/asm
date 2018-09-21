@@ -24,23 +24,11 @@ static int check_file_header(FILE* input_file)
 
 static void load_segment_sizes(core_t* core, FILE* input_file)
 {
-    // old position in file
-    size_t fpos = ftell(input_file);
+    // read text segment size
+    fread(&core->text_size, sizeof(size_t), 1, input_file);
 
     // read data segment size
-    fread(&core->data_size, sizeof(core->data_size), 1, input_file);
-
-    // skip the data segment
-    fseek(input_file, core->data_size, SEEK_CUR);
-
-    // read text segment size
-    fread(&core->text_size, sizeof(core->text_size), 1, input_file);
-
-    // adjust to word count
-    core->text_size /= 4;
-
-    // go back to where we were
-    fseek(input_file, fpos, SEEK_SET);
+    fread(&core->data_size, sizeof(size_t), 1, input_file);
 }
 
 int load_file(core_t* core, FILE* input_file)
@@ -54,21 +42,23 @@ int load_file(core_t* core, FILE* input_file)
     load_segment_sizes(core, input_file);
 
     size_t data_size = core->data_size;
-    size_t text_size = 4 * core->text_size;
+    size_t text_size = core->text_size;
 
-    core->binary_data = malloc(data_size + text_size);
-    if (core->binary_data == NULL) {
+    core->seg_text = malloc(data_size + text_size);
+    if (core->seg_text == NULL) {
         printf("error: not enough memory\n");
         return 0;
     }
 
-    // read data segment
-    fseek(input_file, sizeof(data_size), SEEK_CUR);
-    fread(core->binary_data, 1, data_size, input_file);
+    // read text segment
+    fread(core->seg_text, 1, text_size, input_file);
 
     // read text segment
-    fseek(input_file, sizeof(text_size), SEEK_CUR);
-    fread(core->binary_data + data_size, 1, text_size, input_file);
+    fread(core->seg_text + text_size, 1, data_size, input_file);
+    core->seg_data = (uint8_t*)(core->seg_text + text_size);
+
+    // adjust text size to number of instructions instead
+    core->text_size /= 4;
 
     return 1;
 }

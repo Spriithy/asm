@@ -15,9 +15,10 @@ typedef struct {
 extern config_t config;
 
 typedef struct {
-    uint8_t* binary_data;
-    size_t   data_size;
-    size_t   text_size;
+    uint32_t* seg_text;
+    uint8_t*  seg_data;
+    size_t    text_size;
+    size_t    data_size;
 } core_t;
 
 int load_file(core_t* core, FILE* input_file);

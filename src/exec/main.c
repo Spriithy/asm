@@ -95,7 +95,7 @@ int main(int argc, char** argv)
 
     load_file(&core, input_file);
 
-    disasm(NULL, stdout, (uint32_t*)(core.binary_data + core.data_size), core.text_size);
+    disasm(NULL, stdout, core.seg_text, core.text_size);
 
     fclose(input_file);
 
