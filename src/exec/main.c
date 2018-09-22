@@ -13,8 +13,8 @@ config_t config = {
 
 int main(int argc, char** argv)
 {
-    register_arg(TYPE_FLAG, "--XDebug", "-D", &config.debug, NULL);
-    register_arg(TYPE_INT, "--XMemSize", NULL, &config.memory_size, NULL);
+    register_arg(TYPE_FLAG, "--XDebug", "-d", &config.debug, NULL);
+    register_arg(TYPE_INT, "--XMemSize", "-mem", &config.memory_size, NULL);
     register_arg(TYPE_STRING, "--", "-", &config.input_file, NULL);
     parse_args(argc, argv);
 
