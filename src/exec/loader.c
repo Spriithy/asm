@@ -1,3 +1,4 @@
+#include "../shared/vector.h"
 #include "core.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -22,13 +23,39 @@ static int check_file_header(FILE* input_file)
     return hdr_magic == HDR_MAGIC;
 }
 
-static void load_segment_sizes(core_t* core, FILE* input_file)
+static void read_segment_sizes(core_t* core, FILE* input_file)
 {
+    // read the number of defined functions
+    fread(&core->nfunc, sizeof(size_t), 1, input_file);
+
     // read text segment size
     fread(&core->text_size, sizeof(size_t), 1, input_file);
 
     // read data segment size
     fread(&core->data_size, sizeof(size_t), 1, input_file);
+}
+
+static void read_functions(core_t* core, FILE* input_file)
+{
+    // load functions
+    for (size_t i = 0; i < core->nfunc; i++) {
+        func_t func = {};
+        size_t namelen = 0;
+
+        // read function address
+        fread(&func.addr, sizeof(uint64_t), 1, input_file);
+
+        // read function's name length
+        fread(&namelen, sizeof(size_t), 1, input_file);
+
+        // read the actual name
+        func.name = malloc(namelen + 1);
+        func.name[namelen] = '\0';
+        fread(func.name, 1, namelen, input_file);
+
+        // save to vector
+        vector_push(core->funcs, func);
+    }
 }
 
 int load_file(core_t* core, FILE* input_file)
@@ -39,7 +66,10 @@ int load_file(core_t* core, FILE* input_file)
     }
 
     // read segment sizes
-    load_segment_sizes(core, input_file);
+    read_segment_sizes(core, input_file);
+
+    // read function definition segment
+    read_functions(core, input_file);
 
     size_t text_size = core->text_size;
     size_t data_size = core->data_size;

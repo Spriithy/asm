@@ -383,8 +383,6 @@ int reg_index(char* reg)
 
 void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
 {
-    (void)core;
-
     if (code_size == 0) {
         return;
     }
@@ -449,11 +447,6 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
 
         case 0x0f: /* sd %reg_name(RS1), offset(%RD) */
             fprintf(f, "sd    %s, %d(%s)\n", reg_name(RD), OFFSET, reg_name(RS1));
-            break;
-
-        // XXX
-        case 0x10: /* mov %reg_name(RD), %RS1 */
-            fprintf(f, "mov   %s, %s\n", reg_name(RD), reg_name(RS1));
             break;
 
         case 0x11: /* mfhi %rd */
@@ -597,9 +590,13 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3a: /* call label */
-            //           if (core != NULL && core->debug && core->syms != NULL)
-            //             fprintf(f, "call  0x%X<%s>\n", I24, core->syms[I24]);
-            //       else
+            if (core != NULL && config.debug) {
+                func_t* func = core_func_addr_search(core, I24);
+                if (func != NULL) {
+                    fprintf(f, "call  0x%X<%s>\n", I24, func->name);
+                    break;
+                }
+            }
             fprintf(f, "call  0x%X\n", I24);
             break;
 
@@ -608,31 +605,40 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3c: /* j label */
-            //     if (core != NULL && core->debug && core->syms != NULL)
-            //       fprintf(f, "j     0x%X<%s>\n", I24, core->syms[I24]);
-            // else
+            if (core != NULL && config.debug) {
+                func_t* func = core_func_addr_search(core, I24);
+                if (func != NULL) {
+                    fprintf(f, "j     0x%X<%s>\n", I24, func->name);
+                    break;
+                }
+            }
             fprintf(f, "j     0x%X\n", I24);
             break;
 
         case 0x3d: /* jr %rs1 */
-            //if (core != NULL && core->debug)
-            //  fprintf(f, "jr    %s\n", reg_name(RD));
-            //else
             fprintf(f, "jr    %s\n", reg_name(RD));
             break;
 
         case 0x3e: /* je %reg_name(RS1), %reg_name(RS2), label */
-            //if (core != NULL && core->debug && core->syms != NULL)
-            //  fprintf(f, "je    %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, core->syms[I16]);
-            //else
-            fprintf(f, "je    %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
+            if (core != NULL && config.debug) {
+                func_t* func = core_func_addr_search(core, I16);
+                if (func != NULL) {
+                    fprintf(f, "je    %s, %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, func->name);
+                    break;
+                }
+            }
+            fprintf(f, "je    %s, %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
 
         case 0x3f: /* jne %reg_name(RS1), %reg_name(RS2), label */
-            //if (core != NULL && core->debug && core->syms != NULL)
-            //  fprintf(f, "jne   %s %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, core->syms[I16]);
-            //else
-            fprintf(f, "jne   %s %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
+            if (core != NULL && config.debug) {
+                func_t* func = core_func_addr_search(core, I16);
+                if (func != NULL) {
+                    fprintf(f, "jne   %s, %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, func->name);
+                }
+                break;
+            }
+            fprintf(f, "jne   %s, %s, 0x%X\n", reg_name(RD), reg_name(RS1), I16);
             break;
         }
     }

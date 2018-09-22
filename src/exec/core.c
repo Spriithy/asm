@@ -1,18 +1,19 @@
 #include "core.h"
 #include "../shared/disasm.h"
 #include "../shared/icode.h"
+#include "../shared/vector.h"
+#include "debug.h"
 #include "maths.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-extern void breakpoint(core_t* core);
-
 enum {
     EXC_BAD_ACCESS = 0x10,
     EXC_PC_OUT_OF_BOUNDS,
     EXC_ZERO_DIV,
+    EXC_MAX_RECURSION_DEPTH_REACHED,
 };
 
 enum {
@@ -131,17 +132,17 @@ static inline uint64_t __unmap_address(core_t* core, void* p_addr)
 static void __check_memory_readable(core_t* core, uint64_t v_addr, int access_length)
 {
     int base_readable = v_addr >= core->text_size;
-    int end_readable = v_addr + access_length <= sizeof(core->mem);
+    int end_readable = v_addr + access_length <= config.memory_size;
     exception_if(!(base_readable && end_readable), EXC_BAD_ACCESS);
 }
 
 #define check_memory_writable(v_addr, access_length) __check_memory_writable(core, v_addr, access_length)
 static void __check_memory_writable(core_t* core, uint64_t v_addr, int access_length)
 {
-    int base_writable = v_addr >= core->text_size && v_addr < (core->text_size + core->data_size);
+    int base_writable = v_addr >= core->text_size && v_addr < config.memory_size;
 
     uint64_t v_end = v_addr + access_length;
-    int      end_writable = v_end < (core->text_size + core->data_size);
+    int      end_writable = v_end <= config.memory_size;
 
     exception_if(!(base_writable && end_writable), EXC_BAD_ACCESS);
 }
@@ -216,20 +217,21 @@ static inline void __popw(core_t* core, uint64_t* reg)
     SP += 4;
 }
 
-#define add_pc(offset) ___pc(core, PC + offset)
-#define set_pc(npc) __set_pc(core, npc)
-static inline void __set_pc(core_t* core, uint64_t npc)
-{
-    PC = npc;
-}
-
 static inline void save_frame(core_t* core)
 {
+    uint64_t npc = decode_imm24(*(uint32_t*)map_address(PC)) - 4;
+    if (core->caller_pc == npc) {
+        exception_if(++core->recursion_depth > config.recursion_limit, EXC_MAX_RECURSION_DEPTH_REACHED);
+    }
+    core->caller_pc = npc;
+
+    // TODO Retain information about previous caller
+
     push(RA);
     push(FP);
     RA = PC;
     FP = SP;
-    set_pc(decode_imm24(*(uint32_t*)map_address(PC)) - 4);
+    PC = npc;
 
     push(R[16]);
     push(R[17]);
@@ -252,7 +254,7 @@ static inline void restore_frame(core_t* core)
     pop(&R[17]);
     pop(&R[16]);
 
-    set_pc(RA);
+    PC = RA;
     pop(&FP);
     pop(&RA);
 }
@@ -261,8 +263,23 @@ static inline void show_disas(core_t* core)
 {
     if (config.debug) {
         printf("0x%-12llX ", PC);
-        disasm(NULL, stdout, (uint32_t*)map_address(PC), 1);
+        disasm(core, stdout, (uint32_t*)map_address(PC), 1);
     }
+}
+
+static void cleanup(core_t* core)
+{
+    vector_iter(func_t, func, core->funcs)
+    {
+        free(func->name);
+    }
+    vector_free(core->funcs);
+    free(core->mem);
+}
+
+static void breakpoint(core_t* core)
+{
+    (void)core;
 }
 
 static inline void interrupt(core_t* core)
@@ -275,6 +292,7 @@ static inline void interrupt(core_t* core)
         putchar((int)R[5]);
         break;
     case 0x0a: /* exit */
+        cleanup(core);
         exit(R[5]);
     }
 }
@@ -283,28 +301,25 @@ void core_exec(core_t* core)
 {
     GP = unmap_address(core->seg_data + core->data_size);
     FP = SP = config.memory_size;
-
     PC = 0;
-    uint32_t* ip;
 
+    uint32_t* ip;
 core_loop:
     if (PC > core->text_size) {
         exception(EXC_PC_OUT_OF_BOUNDS);
     }
     ip = map_address(PC);
+    show_disas(core);
     switch (decode_op(*ip)) {
     case _NOP: /* nop */
-        show_disas(core);
         break;
 
     case _INTERRUPT: /* int */
-        show_disas(core);
         interrupt(core);
         break;
 
     case _BREAKPOINT: /* breakpoint */
         if (config.debug) {
-            show_disas(core);
             breakpoint(core);
             PC += 4;
             R[0] = 0x0; // $r0 is hard wired to 0
@@ -313,274 +328,221 @@ core_loop:
         break;
 
     case _LB: /* lb %RD, offset(%RS1) */
-        show_disas(core);
         rd = load_memory(rs1 + decode_offset(*ip), ACCESS_BYTE, SIGNED);
         break;
 
     case _LBU: /* lbu %RD, offset(%RS1) */
-        show_disas(core);
         rd = load_memory(rs1 + decode_offset(*ip), ACCESS_BYTE, UNSIGNED);
         break;
 
     case _LH: /* lh %RD, offset(%RS1) */
-        show_disas(core);
         rd = load_memory(rs1 + decode_offset(*ip), ACCESS_HALFWORD, SIGNED);
         break;
 
     case _LHU: /* lhu %RD, offset(%RS1) */
-        show_disas(core);
         rd = load_memory(rs1 + decode_offset(*ip), ACCESS_BYTE, UNSIGNED);
         break;
 
     case _LUI: /* lui %RD, $imm16 */
-        show_disas(core);
         rd = decode_imm16_unsigned(*ip) << 16;
         break;
 
     case _LW: /* lw %RD, offset(%RS1) */
-        show_disas(core);
         rd = load_memory(rs1 + decode_offset(*ip), ACCESS_WORD, SIGNED);
         break;
 
     case _LWU: /* lwu %RD, offset(%RS1) */
-        show_disas(core);
         rd = load_memory(rs1 + decode_offset(*ip), ACCESS_WORD, UNSIGNED);
         break;
 
     case _LD: /* ld %RD, offset(%RS1) */
-        show_disas(core);
         rd = load_memory(rs1 + decode_offset(*ip), ACCESS_DOUBLEWORD, UNSIGNED);
         break;
 
     case _SB: /* sb %RS1, offset(%RD) */
-        show_disas(core);
         store_memory(rd + decode_offset(*ip), ACCESS_BYTE, rs1);
         break;
 
     case _SH: /* sh %RS1, offset(%RD) */
-        show_disas(core);
         store_memory(rd + decode_offset(*ip), ACCESS_HALFWORD, rs1);
         break;
 
     case _SW: /* sw %RS1, offset(%RD) */
-        show_disas(core);
         store_memory(rd + decode_offset(*ip), ACCESS_WORD, rs1);
         break;
 
     case _SD: /* sd %RS1, offset(%RD) */
-        show_disas(core);
         store_memory(rd + decode_offset(*ip), ACCESS_DOUBLEWORD, rs1);
         break;
 
     case _MFHI: /* mfhi %rd */
-        show_disas(core);
         rd = core->hi;
         break;
 
     case _MTHI: /* mthi %rs1 */
-        show_disas(core);
         core->hi = rs1;
         break;
 
     case _MFLO: /* mflo %rd */
-        show_disas(core);
         rd = core->lo;
         break;
 
     case _MTLO: /* mtlo %rs1 */
-        show_disas(core);
         core->lo = rs1;
         break;
 
     case _SLT: /* slt $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = ((int64_t)rs1 < (int64_t)rs2);
         break;
 
     case _SLTU: /* sltu $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = (rs1 < rs2);
         break;
 
     case _SLTI: /* slti $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = ((int64_t)rs1 < decode_imm16_signed(*ip));
         break;
 
     case _SLTIU: /* sltiu $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = (rs1 < decode_imm16_unsigned(*ip));
         break;
 
     case _EQ: /* eq $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = (rs1 == rs2);
         break;
 
     case _EQI: /* eqi $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = ((int64_t)rs1 == decode_imm16_signed(*ip));
         break;
 
     case _EQIU: /* eqiu $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = (rs1 == decode_imm16_unsigned(*ip));
         break;
 
     case _OR: /* or $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = rs1 | rs2;
         break;
 
     case _ORI: /* ori $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = rs1 | decode_imm16_unsigned(*ip);
         break;
 
     case _AND: /* and $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = rs1 & rs2;
         break;
 
     case _ANDI: /* andi $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = rs1 & decode_imm16_unsigned(*ip);
         break;
 
     case _XOR: /* xor $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = rs1 ^ rs2;
         break;
 
     case _XORI: /* xori $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = rs1 ^ decode_imm16_unsigned(*ip);
         break;
 
     case _NOR: /* nor $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = ~(rs1 | rs2);
         break;
 
     case _SHL: /* shl $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = rs1 << rs2;
         break;
 
     case _SHLI: /* shli $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = rs1 << decode_imm16_unsigned(*ip);
         break;
 
     case _SHR: /* shr $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = rs1 >> rs2;
         break;
 
     case _SHRI: /* shri $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = rs1 >> decode_imm16_unsigned(*ip);
         break;
 
     case _ADD: /* add $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = rs1 + rs2;
         break;
 
     case _ADDI: /* addi $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = (int64_t)rs1 + decode_imm16_signed(*ip);
         break;
 
     case _ADDIU: /* addiu $rd, $rs1, #imm16 */
-        show_disas(core);
         rd = rs1 + rs2;
         break;
 
     case _SUB: /* sub $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = (int64_t)rs1 - decode_imm16_signed(*ip);
         break;
 
     case _SUBU: /* subu $rd, $rs1, $rs2 */
-        show_disas(core);
         rd = rs1 - decode_imm16_unsigned(*ip);
         break;
 
     case _MUL: /* mul $rs1, $rs2 */
-        show_disas(core);
         mult64to128(rs1, rs2, &core->hi, &core->lo, SIGNED);
         break;
 
     case _MULU: /* mulu $rs1, $rs2 */
-        show_disas(core);
         mult64to128(rs1, rs2, &core->hi, &core->lo, UNSIGNED);
         break;
 
     case _DIV: /* div $rs1, $rs2 */
-        show_disas(core);
         exception_if(rs2 == 0, EXC_ZERO_DIV);
         core->hi = (int64_t)rs1 % (int64_t)rs2;
         core->lo = (int64_t)rs1 / (int64_t)rs2;
         break;
 
     case _DIVU: /* divu $rs1, $rs2 */
-        show_disas(core);
         exception_if(rs2 == 0, EXC_ZERO_DIV);
         core->hi = rs1 % rs2;
         core->lo = rs1 / rs2;
         break;
 
     case _PUSHW: /* pushw $rd */
-        show_disas(core);
         pushw(rs1);
         break;
 
     case _PUSH: /* push $rs1 */
-        show_disas(core);
         push(rs1);
         break;
 
     case _POPW: /* popw $rd */
-        show_disas(core);
         popw(&rd);
         break;
 
     case _POP: /* pop $rd */
-        show_disas(core);
         pop(&rd);
         break;
 
     case _CALL: /* call label */
-        show_disas(core);
         save_frame(core);
         break;
 
     case _RET: /* ret */
-        show_disas(core);
         restore_frame(core);
         break;
 
     case _J: /* j label */
-        show_disas(core);
-        set_pc(decode_imm24(*ip) - 1);
+        PC = decode_imm24(*ip) - 4;
         break;
 
     case _JR: /* jr $rs1 */
-        show_disas(core);
-        set_pc(rd - 1);
+        PC = rd - 1;
         break;
 
     case _JE: /* je $rs1, $rs2, label */
-        show_disas(core);
         if (rd == rs1)
-            set_pc(decode_imm16_unsigned(*ip) - 4);
+            PC = decode_imm16_unsigned(*ip) - 4;
         break;
 
     case _JNE: /* jne $rs1, $rs2, label */
-        show_disas(core);
         if (rd != rs1)
-            set_pc(decode_imm16_unsigned(*ip) - 4);
+            PC = decode_imm16_unsigned(*ip) - 4;
         break;
     }
 

@@ -34,9 +34,9 @@ int parse_args(int argc, char** argv)
                     for (size_t j = 0; j < strlen(argv[i]); j++) {
                         argv[i][j] = tolower(argv[i][j]);
                     }
-                    if (strcmp(argv[i], "true") == 0 || atoi(argv[i]) == 1) {
+                    if (strcmp(argv[i], "true") == 0 || atol(argv[i]) == 1) {
                         arg_set(int, 1);
-                    } else if (strcmp(argv[i], "false") == 0 || (atoi(argv[i]) == 0 && argv[i][0] != '0')) {
+                    } else if (strcmp(argv[i], "false") == 0 || (atol(argv[i]) == 0 && argv[i][0] != '0')) {
                         arg_set(int, 0);
                     } else {
                         printf("warning: missing 1 positional argument for %s (type: bool)\n", argv[i - 1]);
@@ -51,12 +51,12 @@ int parse_args(int argc, char** argv)
                         return parsed;
                     }
                     i++;
-                    int val = atoi(argv[i]);
+                    long val = atol(argv[i]);
                     if (val == 0 && argv[i][0] != '0') {
                         printf("error: %s expects an integer value\n", argv[i - 1]);
                         i--;
                     } else {
-                        arg_set(int, val);
+                        arg_set(long, val);
                     }
                     parsed++;
                     continue;
