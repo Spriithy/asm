@@ -1,7 +1,6 @@
 #ifndef EXEC_CORE_H
 #define EXEC_CORE_H
 
-#include "debug.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

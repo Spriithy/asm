@@ -2,7 +2,6 @@
 #include "../shared/disasm.h"
 #include "../shared/icode.h"
 #include "../shared/vector.h"
-#include "debug.h"
 #include "maths.h"
 #include <stdarg.h>
 #include <stdio.h>
