@@ -262,7 +262,7 @@ static inline void show_disas(core_t* core)
 {
     if (config.debug) {
         printf("0x%-12llX ", PC);
-        disasm(core, stdout, (uint32_t*)map_address(PC), 1);
+        disasm(core->funcs, (uint32_t*)map_address(PC), 1, stdout);
     }
 }
 

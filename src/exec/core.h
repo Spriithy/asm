@@ -1,6 +1,7 @@
 #ifndef EXEC_CORE_H
 #define EXEC_CORE_H
 
+#include "../shared/func.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -14,11 +15,6 @@ typedef struct {
 } config_t;
 
 extern config_t config;
-
-typedef struct {
-    uint64_t addr;
-    char*    name;
-} func_t;
 
 typedef struct {
     uint8_t*  mem;
@@ -39,8 +35,5 @@ typedef struct {
 
 int  load_file(core_t* core, FILE* input_file);
 void core_exec(core_t* core);
-
-func_t* core_func_addr_search(core_t* core, uint64_t addr);
-func_t* core_func_name_search(core_t* core, char* name);
 
 #endif // exec/core.h

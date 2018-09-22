@@ -381,7 +381,7 @@ int reg_index(char* reg)
     return -1;
 }
 
-void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
+void disasm(func_t* funcs, uint32_t* code, size_t code_size, FILE* f)
 {
     if (code_size == 0) {
         return;
@@ -590,8 +590,8 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3a: /* call label */
-            if (core != NULL && config.debug) {
-                func_t* func = core_func_addr_search(core, I24);
+            if (funcs != NULL) {
+                func_t* func = core_func_addr_search(funcs, I24);
                 if (func != NULL) {
                     fprintf(f, "call  0x%X<%s>\n", I24, func->name);
                     break;
@@ -605,8 +605,8 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3c: /* j label */
-            if (core != NULL && config.debug) {
-                func_t* func = core_func_addr_search(core, I24);
+            if (funcs != NULL) {
+                func_t* func = core_func_addr_search(funcs, I24);
                 if (func != NULL) {
                     fprintf(f, "j     0x%X<%s>\n", I24, func->name);
                     break;
@@ -620,8 +620,8 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3e: /* je %reg_name(RS1), %reg_name(RS2), label */
-            if (core != NULL && config.debug) {
-                func_t* func = core_func_addr_search(core, I16);
+            if (funcs != NULL) {
+                func_t* func = core_func_addr_search(funcs, I16);
                 if (func != NULL) {
                     fprintf(f, "je    %s, %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, func->name);
                     break;
@@ -631,8 +631,8 @@ void disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size)
             break;
 
         case 0x3f: /* jne %reg_name(RS1), %reg_name(RS2), label */
-            if (core != NULL && config.debug) {
-                func_t* func = core_func_addr_search(core, I16);
+            if (funcs != NULL) {
+                func_t* func = core_func_addr_search(funcs, I16);
                 if (func != NULL) {
                     fprintf(f, "jne   %s, %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, func->name);
                 }

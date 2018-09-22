@@ -1,7 +1,7 @@
 #ifndef EMU64_DISASM_H
 #define EMU64_DISASM_H
 
-#include "../exec/core.h"
+#include "func.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -74,6 +74,6 @@ int instr_opcode(char* instr);
 
 int   reg_index(char* reg);
 char* reg_name(int reg);
-void  disasm(core_t* core, FILE* f, uint32_t* code, size_t code_size);
+void  disasm(func_t* funcs, uint32_t* code, size_t code_size, FILE* f);
 
 #endif // disasm.h
