@@ -591,7 +591,7 @@ void disasm(func_t* funcs, uint32_t* code, size_t code_size, FILE* f)
 
         case 0x3a: /* call label */
             if (funcs != NULL) {
-                func_t* func = core_func_addr_search(funcs, I24);
+                func_t* func = func_addr_search(funcs, I24);
                 if (func != NULL) {
                     fprintf(f, "call  0x%X<%s>\n", I24, func->name);
                     break;
@@ -606,7 +606,7 @@ void disasm(func_t* funcs, uint32_t* code, size_t code_size, FILE* f)
 
         case 0x3c: /* j label */
             if (funcs != NULL) {
-                func_t* func = core_func_addr_search(funcs, I24);
+                func_t* func = func_addr_search(funcs, I24);
                 if (func != NULL) {
                     fprintf(f, "j     0x%X<%s>\n", I24, func->name);
                     break;
@@ -621,7 +621,7 @@ void disasm(func_t* funcs, uint32_t* code, size_t code_size, FILE* f)
 
         case 0x3e: /* je %reg_name(RS1), %reg_name(RS2), label */
             if (funcs != NULL) {
-                func_t* func = core_func_addr_search(funcs, I16);
+                func_t* func = func_addr_search(funcs, I16);
                 if (func != NULL) {
                     fprintf(f, "je    %s, %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, func->name);
                     break;
@@ -632,7 +632,7 @@ void disasm(func_t* funcs, uint32_t* code, size_t code_size, FILE* f)
 
         case 0x3f: /* jne %reg_name(RS1), %reg_name(RS2), label */
             if (funcs != NULL) {
-                func_t* func = core_func_addr_search(funcs, I16);
+                func_t* func = func_addr_search(funcs, I16);
                 if (func != NULL) {
                     fprintf(f, "jne   %s, %s, 0x%X<%s>\n", reg_name(RD), reg_name(RS1), I16, func->name);
                 }

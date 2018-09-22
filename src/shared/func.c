@@ -2,7 +2,7 @@
 #include "vector.h"
 #include <string.h>
 
-func_t* core_func_addr_search(func_t* funcs, uint64_t addr)
+func_t* func_addr_search(func_t* funcs, uint64_t addr)
 {
     vector_iter(func_t, func, funcs)
     {
@@ -14,7 +14,7 @@ func_t* core_func_addr_search(func_t* funcs, uint64_t addr)
     return NULL;
 }
 
-func_t* core_func_name_search(func_t* funcs, char* name)
+func_t* func_name_search(func_t* funcs, char* name)
 {
     vector_iter(func_t, func, funcs)
     {

@@ -1,4 +1,4 @@
-#include "src/exec/debug.h"
+#include "src/shared/func.h"
 #include "src/shared/icode.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -28,7 +28,8 @@ int main(void)
     };
 
     func_t funcs[] = {
-        { 0x18, "main" },
+        { 0x00, "_start" },
+        { 0x1C, "main" },
     };
 
     FILE* f = fopen("raw.esf.bin", "wb+");
@@ -36,7 +37,7 @@ int main(void)
         exit(-1);
 
     size_t hdr_magic = 0x6865787944414e4f;
-    size_t nfunc = 1;
+    size_t nfunc = sizeof(funcs) / sizeof(funcs[0]);
     size_t data_size = 0;
     size_t text_size = sizeof(code);
 

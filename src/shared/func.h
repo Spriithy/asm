@@ -8,7 +8,7 @@ typedef struct {
     char*    name;
 } func_t;
 
-func_t* core_func_addr_search(func_t* funcs, uint64_t addr);
-func_t* core_func_name_search(func_t* funcs, char* name);
+func_t* func_addr_search(func_t* funcs, uint64_t addr);
+func_t* func_name_search(func_t* funcs, char* name);
 
 #endif // shared/func.h
