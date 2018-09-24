@@ -1,10 +1,10 @@
-.include "io.asm"
+/*
+ *   Example factorial computation code
+ */
 
     .text
-.proc fact
-
-.proc fact
-        mov  %s0, %a0             // factorial function
+.proc fact                          // factorial function
+        mov  %s0, %a0             
         jne  %s0, %zero, fact.L1
         addi %v0, %zero, 1
         ret

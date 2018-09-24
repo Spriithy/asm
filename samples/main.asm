@@ -1,5 +1,4 @@
-.include "io.asm"
-.include "fact.asm"
+.include "lib.asm"
 
         .text
 .proc main
