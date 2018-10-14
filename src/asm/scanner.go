@@ -11,11 +11,18 @@ import (
 	"unicode/utf8"
 )
 
+type Pos struct {
+	Line, Col int
+}
+
+func (p Pos) String() string {
+	return fmt.Sprintf("(%d, %d)", p.Line, p.Col)
+}
+
 type Token struct {
-	Source string
+	File   *File
+	Pos    Pos
 	Kind   int
-	Line   int
-	Col    int
 	Text   string
 	IntVal uint64
 	StrVal string
@@ -55,56 +62,53 @@ func kindName(kind int) string {
 func (t *Token) String() (str string) {
 	switch {
 	case t.Kind == TokEOF:
-		str = fmt.Sprintf("token(eof) (%d, %d)", t.Line, t.Col)
+		str = fmt.Sprintf("token(eof) %s", t.Pos)
 
 	case t.Kind == TokInt:
-		str = fmt.Sprintf("token(int) (%d, %d) '%s' %d", t.Line, t.Col, t.Text, t.IntVal)
+		str = fmt.Sprintf("token(int) %s '%s' %d", t.Pos, t.Text, t.IntVal)
 
 	case t.Kind > 127:
-		str = fmt.Sprintf("token(%s) (%d, %d) '%.*s'", kindName(t.Kind), t.Line, t.Col, 32, t.Text)
+		str = fmt.Sprintf("token(%s) %s '%.*s'", kindName(t.Kind), t.Pos, 32, t.Text)
 
 	default:
-		str = fmt.Sprintf("token('%s') (%d, %d)", kindName(t.Kind), t.Line, t.Col)
+		str = fmt.Sprintf("token('%s') %s", kindName(t.Kind), t.Pos)
 	}
 	return
 }
 
 type Scanner struct {
-	File  string
+	File  *File
 	Data  []rune
-	Pos   int
-	Line  int
-	Col   int
+	pos   int
+	Pos   Pos
 	Token *Token
 }
 
-func Scan(filePath string) *Scanner {
-	bytes, err := ioutil.ReadFile(filePath)
+func Scan(file *File) *Scanner {
+	bytes, err := ioutil.ReadFile(file.Path)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		os.Exit(1)
 	}
 
 	return &Scanner{
-		File:  filePath,
+		File:  file,
 		Data:  []rune(string(bytes)),
-		Pos:   0,
-		Line:  1,
-		Col:   1,
+		pos:   0,
+		Pos:   Pos{1, 1},
 		Token: nil,
 	}
 }
 
-func (s *Scanner) errorf(fmtStr string, args ...interface{}) {
-	pfx := fmt.Sprintf("%s ~ line %d, column %d\n  => ", s.File, s.Line, s.Col)
-	fmt.Printf("error: "+pfx+fmtStr+"\n", args...)
+func (s *Scanner) errorf(msg string, args ...interface{}) {
+	s.File.Errorf(s.Pos, msg, args...)
 }
 
 func (s *Scanner) chr() rune {
 	if s.eof() {
 		return 0
 	}
-	return s.Data[s.Pos]
+	return s.Data[s.pos]
 }
 
 func (s *Scanner) forward() {
@@ -112,12 +116,12 @@ func (s *Scanner) forward() {
 		s.Token.Text += string(s.chr())
 	}
 
-	s.Pos++
-	s.Col++
+	s.pos++
+	s.Pos.Col++
 
 	if s.chr() == '\n' {
-		s.Line++
-		s.Col = 0
+		s.Pos.Line++
+		s.Pos.Col = 0
 	}
 }
 
@@ -158,7 +162,7 @@ func (s *Scanner) fexpect(f func(rune) bool) bool {
 }
 
 func (s *Scanner) eof() bool {
-	return s.Pos >= len(s.Data)
+	return s.pos >= len(s.Data)
 }
 
 func isHex(r rune) bool {
@@ -175,9 +179,8 @@ func isNamePart(r rune) bool {
 
 func (s *Scanner) newTok() {
 	s.Token = &Token{
-		Source: s.File,
-		Line:   s.Line,
-		Col:    s.Col,
+		File: s.File,
+		Pos:  s.Pos,
 	}
 }
 
@@ -396,6 +399,7 @@ func (s *Scanner) discardComment() {
 	}
 }
 
+/*
 func (s *Scanner) discardBlockComment() bool {
 	for depth := 1; depth > 0; {
 		switch {
@@ -415,6 +419,7 @@ func (s *Scanner) discardBlockComment() bool {
 	}
 	return true
 }
+*/
 
 func (s *Scanner) Tokenize() {
 	s.discardSpaces()
@@ -447,13 +452,10 @@ func (s *Scanner) Tokenize() {
 		s.scanChar()
 		return
 
-	case s.match('/'):
+	case s.match(';'):
 		switch {
-		case s.match('/'):
+		case s.match(';'):
 			s.discardComment()
-
-		case s.match('*'):
-			s.discardBlockComment()
 
 		default:
 			t.Kind = int(s.chr())

@@ -1,9 +1,9 @@
-/*
- *   Example factorial computation code
- */
+;;
+;;  Example factorial computation code
+;;
 
     .text
-.proc fact                          // factorial function
+.proc fact                          ;; factorial function
         mov  %s0, %a0             
         jne  %s0, %zero, fact.L1
         addi %v0, %zero, 1

@@ -7,7 +7,7 @@ import (
 
 type Instr struct {
 	File     *File
-	Where    *Token
+	Pos      Pos
 	Code     uint32
 	Dest     uint32
 	Src1     uint32
@@ -27,7 +27,7 @@ type CodeGen struct {
 func (cg *CodeGen) errorf(fmtStr string, args ...interface{}) {
 	instr := cg.fetchInstr()
 	file := filepath.Base(instr.File.Path)
-	pfx := fmt.Sprintf("%s ~ line %d, column %d\n  => ", file, instr.Where.Line, instr.Where.Col)
+	pfx := fmt.Sprintf("%s%s\n  => ", file, instr.Pos)
 	fmt.Printf("error: "+pfx+fmtStr+"\n", args...)
 }
 
@@ -44,7 +44,7 @@ func (cg *CodeGen) Emit(fileName string) {
 		case codeOf["call"]:
 			proc, ok := cg.fetchProcedure(instr.Sym, fileName)
 			if !ok {
-				cg.errorf("undefined procedure reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Where.Line, instr.Where.Col)
+				cg.errorf("undefined procedure reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Pos.Line, instr.Pos.Col)
 				cg.EmitInstr(0x00)
 				continue
 			}
@@ -53,7 +53,7 @@ func (cg *CodeGen) Emit(fileName string) {
 		case codeOf["j"], codeOf["je"], codeOf["jne"]:
 			label, ok := cg.fetchLabel(instr.Sym, fileName)
 			if !ok {
-				cg.errorf("undefined label reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Where.Line, instr.Where.Col)
+				cg.errorf("undefined label reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Pos.Line, instr.Pos.Col)
 				cg.EmitInstr(0x00)
 				continue
 			}
@@ -68,7 +68,7 @@ func (cg *CodeGen) Emit(fileName string) {
 			sym, ok := cg.fetchSymbol(instr.Sym, fileName)
 
 			if !ok {
-				cg.errorf("undefined symbol reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Where.Line, instr.Where.Col)
+				cg.errorf("undefined symbol reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Pos.Line, instr.Pos.Col)
 				cg.EmitInstr(0x00)
 				continue
 			}

@@ -8,8 +8,7 @@ import (
 
 type Symbol struct {
 	File   *File
-	Line   int
-	Col    int
+	Pos    Pos
 	Name   string
 	Kind   int
 	Offset int
@@ -57,7 +56,7 @@ func (p *FileParser) localSymbol(sym Symbol) {
 func (p *FileParser) exportedSymbol(sym Symbol) {
 	p.localSymbol(sym)
 	if orig, ok := p.FileSet.Globals[sym.Name]; ok {
-		p.errorf("redefinition of exported symbol '%s'. Previous definition was in '%s' on line %d, column %d.", sym.Name, orig.File.ShortPath(), orig.Line, orig.Col)
+		p.errorf("redefinition of exported symbol '%s'. Previous definition was in '%s' on line %d, column %d.", sym.Name, orig.File.ShortPath(), orig.Pos.Line, orig.Pos.Col)
 	}
 	p.FileSet.Globals[sym.Name] = sym
 }
@@ -96,10 +95,8 @@ noAdvance:
 	return p.File
 }
 
-func (p *FileParser) errorf(fmtStr string, args ...interface{}) {
-	file := filepath.Base(p.File.Path)
-	pfx := fmt.Sprintf("%s ~ line %d, column %d\n  => ", file, p.Token.Line, p.Token.Col)
-	fmt.Printf("error: "+pfx+fmtStr+"\n", args...)
+func (p *FileParser) errorf(msg string, args ...interface{}) {
+	p.File.Errorf(p.Token.Pos, msg, args...)
 }
 
 func (p *FileParser) forward() {
@@ -140,70 +137,6 @@ func (p *FileParser) text() string {
 	return strings.Trim(p.Token.Text, " \t\n\r")
 }
 
-var codeOf = map[string]uint32{
-	"nop":        0x00,
-	"int":        0x01,
-	"breakpoint": 0x02,
-	"lb":         0x04,
-	"lbu":        0x05,
-	"lh":         0x06,
-	"lhu":        0x07,
-	"lui":        0x08,
-	"lw":         0x09,
-	"lwu":        0x0a,
-	"ld":         0x0b,
-	"la":         0xff, // la corner case
-	"sb":         0x0c,
-	"sh":         0x0d,
-	"sw":         0x0e,
-	"sd":         0x0f,
-	"mov":        0x2b, // mov = add
-	"mfhi":       0x11,
-	"mthi":       0x12,
-	"mflo":       0x13,
-	"mtlo":       0x14,
-	"slt":        0x15,
-	"sltu":       0x16,
-	"slti":       0x17,
-	"sltiu":      0x18,
-	"eq":         0x19,
-	"equ":        0x19, // equ = eq
-	"eqi":        0x1a,
-	"eqiu":       0x1b,
-	"or":         0x20,
-	"ori":        0x21,
-	"and":        0x22,
-	"andi":       0x23,
-	"xor":        0x24,
-	"xori":       0x25,
-	"nor":        0x26,
-	"not":        0x26, // not = nor
-	"shl":        0x27,
-	"shli":       0x28,
-	"shr":        0x29,
-	"shri":       0x2a,
-	"add":        0x2b,
-	"addu":       0x2b, // addu = add
-	"addi":       0x2c,
-	"addiu":      0x2d,
-	"sub":        0x2e,
-	"subu":       0x2f,
-	"mul":        0x30,
-	"mulu":       0x31,
-	"div":        0x32,
-	"divu":       0x33,
-	"pushw":      0x36,
-	"push":       0x37,
-	"popw":       0x38,
-	"pop":        0x39,
-	"call":       0x3a,
-	"ret":        0x3b,
-	"j":          0x3c,
-	"jr":         0x3d,
-	"je":         0x3e,
-	"jne":        0x3f,
-}
-
 func (p *FileParser) instr(name string) {
 	var code, rd, rs1, rs2 uint32
 	var offset, imm int64
@@ -230,7 +163,7 @@ func (p *FileParser) instr(name string) {
 		rs1 = p.regVal()
 		p.expect(')')
 
-		if code <= codeOf["sb"] {
+		if code < codeOf["sb"] {
 			p.emitR(tok, code, rd, rs1, 0, int(offset))
 		} else {
 			p.emitR(tok, code, rs1, rd, 0, int(offset))
@@ -359,7 +292,7 @@ func (p *FileParser) instr(name string) {
 
 	default:
 		p.errorf("unknown instruction '%s'", name)
-		for line := p.Token.Line; p.Token.Line == line; p.forward() {
+		for line := p.Token.Pos.Line; p.Token.Pos.Line == line; p.forward() {
 		}
 	}
 }
@@ -373,8 +306,7 @@ func (p *FileParser) parseTextSegment() {
 
 		sym := Symbol{
 			File:   p.File,
-			Line:   p.Token.Line,
-			Col:    p.Token.Col,
+			Pos:    p.Token.Pos,
 			Offset: p.realOffset(),
 			Kind:   SymProcedure,
 		}
@@ -400,12 +332,10 @@ func (p *FileParser) parseTextSegment() {
 
 		for p.match(TokName) {
 			name := p.text()
-			line, col := p.Token.Line, p.Token.Col
 			if p.match(':') {
 				p.localSymbol(Symbol{
 					File:   p.File,
-					Line:   line,
-					Col:    col,
+					Pos:    p.Token.Pos,
 					Name:   name,
 					Offset: p.realOffset(),
 					Kind:   SymLabel,
@@ -424,7 +354,7 @@ func (p *FileParser) parseTextSegment() {
 func (p *FileParser) emitBase(tok *Token, code uint32) {
 	p.FileSet.Code = append(p.FileSet.Code, Instr{
 		File:     p.File,
-		Where:    tok,
+		Pos:      tok.Pos,
 		Compiled: base(code),
 		Code:     code,
 	})
@@ -434,7 +364,7 @@ func (p *FileParser) emitBase(tok *Token, code uint32) {
 func (p *FileParser) emitR(tok *Token, code, rd, rs1, rs2 uint32, offs int) {
 	p.FileSet.Code = append(p.FileSet.Code, Instr{
 		File:     p.File,
-		Where:    tok,
+		Pos:      tok.Pos,
 		Compiled: r(code, rd, rs1, rs2, offs),
 		Code:     code,
 		Dest:     rd,
@@ -448,7 +378,7 @@ func (p *FileParser) emitR(tok *Token, code, rd, rs1, rs2 uint32, offs int) {
 func (p *FileParser) emitI(tok *Token, code, rd, rs1 uint32, imm int) {
 	p.FileSet.Code = append(p.FileSet.Code, Instr{
 		File:     p.File,
-		Where:    tok,
+		Pos:      tok.Pos,
 		Compiled: i16(code, rd, rs1, imm),
 		Code:     code,
 		Dest:     rd,
@@ -460,23 +390,23 @@ func (p *FileParser) emitI(tok *Token, code, rd, rs1 uint32, imm int) {
 
 func (p *FileParser) emitJ(tok *Token, code, rs1, rs2 uint32, sym string) {
 	p.FileSet.Code = append(p.FileSet.Code, Instr{
-		File:  p.File,
-		Where: tok,
-		Code:  code,
-		Src1:  rs1,
-		Src2:  rs2,
-		Sym:   sym,
+		File: p.File,
+		Pos:  tok.Pos,
+		Code: code,
+		Src1: rs1,
+		Src2: rs2,
+		Sym:  sym,
 	})
 	p.File.CodeSize++
 }
 
 func (p *FileParser) emitLa(tok *Token, rd uint32, sym string) {
 	p.FileSet.Code = append(p.FileSet.Code, Instr{
-		File:  p.File,
-		Where: tok,
-		Code:  codeOf["la"],
-		Dest:  rd,
-		Sym:   sym,
+		File: p.File,
+		Pos:  tok.Pos,
+		Code: codeOf["la"],
+		Dest: rd,
+		Sym:  sym,
 	})
 	p.File.CodeSize += 2
 }
