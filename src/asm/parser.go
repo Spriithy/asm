@@ -163,14 +163,14 @@ func (p *FileParser) instr(name string) {
 		rs1 = p.regVal()
 		p.expect(')')
 
-		if code < codeOf["sb"] {
+		if code < SB {
 			p.emitR(tok, code, rd, rs1, 0, int(offset))
 		} else {
 			p.emitR(tok, code, rs1, rd, 0, int(offset))
 		}
 
 	case "lui":
-		code = codeOf["lui"]
+		code = LUI
 		p.expect(TokReg)
 		rd = p.regVal()
 		p.expect(',')
@@ -228,7 +228,7 @@ func (p *FileParser) instr(name string) {
 			p.expect(TokReg)
 			rd = p.regVal()
 			p.emitR(tok, code, 0, rs2, rd, 0)
-			p.emitR(tok, codeOf["mflo"], 0, rs1, 0, 0)
+			p.emitR(tok, MFLO, 0, rs1, 0, 0)
 		} else {
 			p.emitR(tok, code, 0, rs1, rs2, 0)
 		}
@@ -244,7 +244,7 @@ func (p *FileParser) instr(name string) {
 			p.expect(TokReg)
 			rd = p.regVal()
 			p.emitR(tok, code, 0, rs2, rd, 0)
-			p.emitR(tok, codeOf["mfhi"], 0, rs1, 0, 0)
+			p.emitR(tok, MFHI, 0, rs1, 0, 0)
 		} else {
 			p.emitR(tok, code, 0, rs1, rs2, 0)
 		}
@@ -255,7 +255,7 @@ func (p *FileParser) instr(name string) {
 		p.expect(',')
 		p.expect(TokReg)
 		rs1 = p.regVal()
-		p.emitR(tok, codeOf["add"], rd, rs1, 0, 0)
+		p.emitR(tok, ADD, rd, rs1, 0, 0)
 
 	case "slti", "sltiu", "eqi", "eqiu", "ori", "andi", "xori", "shli", "shri",
 		"addi", "addiu":
@@ -347,7 +347,7 @@ func (p *FileParser) parseTextSegment() {
 	}
 
 	if !p.match(TokEOF) {
-		p.errorf("unexpected token %s", kindName(p.Token.Kind))
+		p.errorf("unexpected token %s.", kindName(p.Token.Kind))
 	}
 }
 
@@ -404,7 +404,7 @@ func (p *FileParser) emitLa(tok *Token, rd uint32, sym string) {
 	p.FileSet.Code = append(p.FileSet.Code, Instr{
 		File: p.File,
 		Pos:  tok.Pos,
-		Code: codeOf["la"],
+		Code: LA,
 		Dest: rd,
 		Sym:  sym,
 	})
@@ -414,7 +414,7 @@ func (p *FileParser) emitLa(tok *Token, rd uint32, sym string) {
 func (p *FileParser) realOffset() int {
 	delta := 0
 	for _, x := range p.FileSet.Code {
-		if x.Code == codeOf["la"] {
+		if x.Code == LA {
 			delta++
 		}
 	}

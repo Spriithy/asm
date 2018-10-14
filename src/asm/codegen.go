@@ -38,44 +38,44 @@ func (cg *CodeGen) Emit(fileName string) {
 	fileEnd := cg.Offset + cg.FileSet.Files[fileName].CodeSize
 	for ; cg.Offset < fileEnd; cg.Offset++ {
 		switch instr := cg.fetchInstr(); instr.Code {
-		case codeOf["call"]:
+		case CALL:
 			proc, ok := cg.fetchProcedure(instr.Sym, fileName)
 			if !ok {
 				cg.errorf("undefined procedure reference to '%s'.", instr.Sym)
-				cg.EmitInstr(0x00)
+				cg.EmitInstr(NOP)
 				continue
 			}
 			cg.EmitInstr(i24(instr.Code, proc.Offset))
 
-		case codeOf["j"], codeOf["je"], codeOf["jne"]:
+		case J, JE, JNE:
 			label, ok := cg.fetchLabel(instr.Sym, fileName)
 			if !ok {
 				cg.errorf("undefined label reference to '%s'.", instr.Sym)
-				cg.EmitInstr(0x00)
+				cg.EmitInstr(NOP)
 				continue
 			}
 
-			if instr.Code == codeOf["j"] {
+			if instr.Code == J {
 				cg.EmitInstr(i24(instr.Code, label.Offset))
 			} else {
 				cg.EmitInstr(i16(instr.Code, instr.Src1, instr.Src2, label.Offset))
 			}
 
-		case codeOf["la"]:
+		case LA:
 			sym, ok := cg.fetchSymbol(instr.Sym, fileName)
 
 			if !ok {
 				cg.errorf("undefined symbol reference to '%s'.", instr.Sym)
-				cg.EmitInstr(0x00)
+				cg.EmitInstr(NOP)
 				continue
 			}
 
 			if sym.Offset>>16 != 0 {
-				cg.EmitInstr(i16(codeOf["lui"], regVal["%at"], 0, sym.Offset>>16))
-				cg.EmitInstr(i16(codeOf["ori"], instr.Src1, regVal["%at"], sym.Offset&0xffff))
+				cg.EmitInstr(i16(LUI, regVal["%at"], 0, sym.Offset>>16))
+				cg.EmitInstr(i16(ORI, instr.Src1, regVal["%at"], sym.Offset&0xffff))
 			} else {
-				cg.EmitInstr(0x00)
-				cg.EmitInstr(i16(codeOf["ori"], instr.Src1, 0, sym.Offset&0xffff))
+				cg.EmitInstr(NOP)
+				cg.EmitInstr(i16(ORI, instr.Src1, 0, sym.Offset&0xffff))
 			}
 
 		default:
@@ -109,7 +109,6 @@ func (cg *CodeGen) fetchLabel(name, file string) (sym Symbol, ok bool) {
 		}
 		return
 	}
-
 	return
 }
 
