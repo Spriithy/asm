@@ -24,13 +24,13 @@ func (f *File) ShortPath() string {
 }
 
 func (f *File) Errorf(pos Pos, msg string, args ...interface{}) {
-	fmt.Printf("%s#%d:%d: \x1b[31merror\x1b[0m :: ", f.ShortPath(), pos.Line, pos.Col)
+	fmt.Printf("[\x1b[31merror\x1b[0m] %s#%d:%d: ", f.ShortPath(), pos.Line, pos.Col)
 	fmt.Printf(msg, args...)
 	fmt.Printf("\n")
 }
 
 func (f *File) Warningf(pos Pos, msg string, args ...interface{}) {
-	fmt.Printf("%s#%d:%d: \x1b[33mwarning\x1b[0m :: ", f.ShortPath(), pos.Line, pos.Col)
+	fmt.Printf("[\x1b[33mwarning\x1b[0m] %s#%d:%d: ", f.ShortPath(), pos.Line, pos.Col)
 	fmt.Printf(msg, args...)
 	fmt.Printf("\n")
 }

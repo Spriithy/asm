@@ -2,7 +2,6 @@ package asm
 
 import (
 	"fmt"
-	"path/filepath"
 )
 
 type Instr struct {
@@ -24,11 +23,9 @@ type CodeGen struct {
 	Offset     int
 }
 
-func (cg *CodeGen) errorf(fmtStr string, args ...interface{}) {
+func (cg *CodeGen) errorf(msg string, args ...interface{}) {
 	instr := cg.fetchInstr()
-	file := filepath.Base(instr.File.Path)
-	pfx := fmt.Sprintf("%s%s\n  => ", file, instr.Pos)
-	fmt.Printf("error: "+pfx+fmtStr+"\n", args...)
+	instr.File.Errorf(instr.Pos, msg, args...)
 }
 
 func (cg *CodeGen) EmitAll() {
@@ -44,7 +41,7 @@ func (cg *CodeGen) Emit(fileName string) {
 		case codeOf["call"]:
 			proc, ok := cg.fetchProcedure(instr.Sym, fileName)
 			if !ok {
-				cg.errorf("undefined procedure reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Pos.Line, instr.Pos.Col)
+				cg.errorf("undefined procedure reference to '%s'.", instr.Sym)
 				cg.EmitInstr(0x00)
 				continue
 			}
@@ -53,7 +50,7 @@ func (cg *CodeGen) Emit(fileName string) {
 		case codeOf["j"], codeOf["je"], codeOf["jne"]:
 			label, ok := cg.fetchLabel(instr.Sym, fileName)
 			if !ok {
-				cg.errorf("undefined label reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Pos.Line, instr.Pos.Col)
+				cg.errorf("undefined label reference to '%s'.", instr.Sym)
 				cg.EmitInstr(0x00)
 				continue
 			}
@@ -68,7 +65,7 @@ func (cg *CodeGen) Emit(fileName string) {
 			sym, ok := cg.fetchSymbol(instr.Sym, fileName)
 
 			if !ok {
-				cg.errorf("undefined symbol reference to '%s' from '%s' line %d, column %d", instr.Sym, instr.File.ShortPath(), instr.Pos.Line, instr.Pos.Col)
+				cg.errorf("undefined symbol reference to '%s'.", instr.Sym)
 				cg.EmitInstr(0x00)
 				continue
 			}
@@ -97,7 +94,7 @@ func (cg *CodeGen) fetchProcedure(name, file string) (sym Symbol, ok bool) {
 	}
 
 	if !sym.IsProcedure() {
-		cg.errorf("no callable symbol found for '%s'.", name)
+		cg.errorf("undefined procedure '%s'.", name)
 		ok = false
 		return
 	}
