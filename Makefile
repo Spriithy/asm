@@ -1,28 +1,18 @@
 CC=clang
-CFLAGS=-Wall -Wextra -Werror -Wno-unused-variable -std=c11 -g 
+CFLAGS=-Wall -Wextra -Werror -Wno-unused-variable -pedantic -std=c11 -g 
+LDFLAGS=
 
-SHARED_SRC=$(wildcard src/shared/*.c) $(wildcard src/shared/**/*.c)
-SHARED_OBJ=$(patsubst %.c, %.o, $(SHARED_SRC))
+SRC=$(wildcard src/*.c) $(wildcard src/**/*.c)
+OBJ=$(patsubst %.c, %.o, $(SRC))
 
-EXEC_SRC=$(wildcard src/exec/*.c) $(wildcard src/exec/**/*.c)
-EXEC_OBJ=$(patsubst %.c, %.o, $(EXEC_SRC))
+all: asm clean
 
-DISASM_SRC=$(wildcard src/disasm/*.c) $(wildcard src/disasm/**/*.c)
-DISASM_OBJ=$(patsubst %.c, %.o, $(DISASM_SRC))
-
-all: exec disasm clean
-
-exec: $(SHARED_OBJ) $(EXEC_OBJ)
-	$(CC) $(CFLAGS) $(SHARED_OBJ) $(EXEC_OBJ) -o asm-exec
-
-disasm: $(SHARED_OBJ) $(DISASM_OBJ)
-	$(CC) $(CFLAGS) $(SHARED_OBJ) $(DISASM_OBJ) -o disasm
+asm: $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) -o asm
 
 clean:
-	rm -f $(SHARED_OBJ) $(EXEC_OBJ) $(DISASM_OBJ)
+	rm -f $(OBJ)
 
 fclean: clean
-	rm -f disasm
-	rm -f asm-exec
 
 re: fclean all
