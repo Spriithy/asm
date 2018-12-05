@@ -1,18 +1,22 @@
 CC=clang
-CFLAGS=-Wall -Wextra -Werror -Wno-unused-variable -pedantic -std=c11 -g 
-LDFLAGS=
+CFLAGS=-Wall -Wextra -Werror -pedantic -std=c11 -g -flto 
+LDFLAGS=-flto 
 
 SRC=$(wildcard src/*.c) $(wildcard src/**/*.c)
 OBJ=$(patsubst %.c, %.o, $(SRC))
 
-all: asm clean
+CPU_SRC=$(wildcard src/cpu/*.c)
+CPU_OBJ=$(patsubst %.c, %.o, $(CPU_SRC))
 
-asm: $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ) -o asm
+all: cpu clean
+
+%.o: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+cpu: $(CPU_OBJ)
+	$(CC) $(LDFLAGS) $(CPU_OBJ) -o $@
 
 clean:
 	rm -f $(OBJ)
 
-fclean: clean
-
-re: fclean all
+re: clean all
