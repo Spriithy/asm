@@ -5,15 +5,15 @@
 #include <errno.h>
 #include <string.h>
 
-#define MEMORY_SIZE (1 << 24)
+#define TEXT_SIZE (1 << 16)
+#define MEMORY_SIZE ((1 << 31) - 1)
 
 struct cpu {
-    int     trap;
-    byte_u* rosector;
-    byte_u* text;
-    byte_u  data[MEMORY_SIZE];
-    dword_u gpr[16];
-    qword_u xmm[8];
+    int trap;
+    u8* rosector;
+    u8  data[MEMORY_SIZE];
+    u32 gpr[16];
+    u64 xmm[8];
 };
 
 extern struct cpu cpu;

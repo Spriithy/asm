@@ -3,26 +3,26 @@
 
 #include <stdint.h>
 
-typedef int8_t  byte;
-typedef int16_t word;
-typedef int32_t dword;
-typedef int64_t qword;
+typedef int8_t  i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
 
-typedef uint8_t  byte_u;
-typedef uint16_t word_u;
-typedef uint32_t dword_u;
-typedef uint64_t qword_u;
+typedef uint8_t  u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
 #define rw_addr(t, addr) ((t*)(addr))
 
-#define rw_byte(addr) rw_addr(byte, addr)
-#define rw_word(addr) rw_addr(word, addr)
-#define rw_dword(addr) rw_addr(dword, addr)
-#define rw_qword(addr) rw_addr(qword, addr)
+#define rw_i8(addr) rw_addr(i8, addr)
+#define rw_i16(addr) rw_addr(i16, addr)
+#define rw_i32(addr) rw_addr(i32, addr)
+#define rw_i64(addr) rw_addr(i64, addr)
 
-#define rw_byte_u(addr) rw_addr(byte_u, addr)
-#define rw_word_u(addr) rw_addr(word_u, addr)
-#define rw_dword_u(addr) rw_addr(dword_u, addr)
-#define rw_qword_u(addr) rw_addr(qword_u, addr)
+#define rw_u8(addr) rw_addr(u8, addr)
+#define rw_u16(addr) rw_addr(u16, addr)
+#define rw_u32(addr) rw_addr(u32, addr)
+#define rw_u64(addr) rw_addr(u64, addr)
 
 #endif /* MEM_H_ */

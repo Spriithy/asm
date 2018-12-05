@@ -1,6 +1,6 @@
 CC=clang
 CFLAGS=-Wall -Wextra -Werror -pedantic -std=c11 -g -flto 
-LDFLAGS=-flto 
+LDFLAGS=-flto -g -O2
 
 SRC=$(wildcard src/*.c) $(wildcard src/**/*.c)
 OBJ=$(patsubst %.c, %.o, $(SRC))
