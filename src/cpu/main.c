@@ -34,18 +34,28 @@ int main(void)
     *ip++ = 0x2c;
     *ip++ = 0x13;
     *ip++ = 0xfa;
-    *ip++ = NOP;
+    // mov %edx, 0xfa132c7f
+
     *ip++ = MOV_RI;
-    *ip++ = encode_r16(DX);
+    *ip++ = encode_r16(SI);
+    *ip++ = 0x12;
+    *ip++ = 0x13;
+    // mov %si, 0x1312
+
+    *ip++ = MOV_MR;
+    *ip++ = encode_r32(ESI);
     *ip++ = 0x00;
     *ip++ = 0x00;
-    *ip++ = NOP;
-    *ip++ = MOV_RI;
-    *ip++ = encode_r8(DH);
-    *ip++ = 0xff;
-    *ip++ = MOV_RR;
-    *ip++ = encode_r64(XMM0);
     *ip++ = encode_r32(EDX);
+    // mov [%esi], %edx
+
+    *ip++ = MOV_RM;
+    *ip++ = encode_r16(AX);
+    *ip++ = encode_r32(ESI);
+    *ip++ = 0x01;
+    *ip++ = 0x00;
+    // mov %ax, [%esi + 1]
+
     *ip++ = HALT;
 
     exec();

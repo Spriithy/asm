@@ -69,30 +69,36 @@ enum opcode {
     //
     // mov %eax, 0xff0a
     //
-    // xxxx xxxx aarr rrrr iiii ....
+    // X X aarr R I...
     //
     MOV_RI = 0x3a,
 
     //
     // mov %eax, %ebx
     //
-    // xxxx xxxx aarr rrrr aarr rrrr
+    // X X aarr R aarr R
     //
     MOV_RR,
 
     //
-    // mov %eax, [%ebx + d * %eax + 12345]
+    // mov %eax, [%ebx + 12345]
     //
-    // xxxx xxxx aarr rrrr --rr rrrr
+    // X X aarr R --rr R O O O O
     //
     MOV_RM,
 
     //
-    // mov %eax, %ebx
+    // mov [%eax + 12345], 0xff0a
     //
-    // xxxx xxxx aarr rrrr aarr rrrr
+    // X X ssrr R O O O O aarr R I I I I
     //
     MOV_MI,
+
+    //
+    // mov [%eax + 12345], %ebx
+    //
+    // X X --rr R O O O O aarr R
+    //
     MOV_MR,
 
     CMP_RI,

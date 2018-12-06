@@ -109,19 +109,19 @@ static void mov_gpr8(enum r8 dst, enum r8 src)
     REG_BYTE_U[dst] = REG_BYTE_U[src];
 }
 
-static void mov_gpr8_gpr16(enum r8 dst, enum r16 src)
+static void mov_m8_imm8(u32 addr, u8 imm8)
 {
-    REG_BYTE_U[dst] = REG_WORD_U[src];
+    MEM_BYTE_U[addr] = imm8;
 }
 
-static void mov_gpr8_gpr32(enum r8 dst, enum r32 src)
+static void mov_m8_gpr8(u32 addr, enum r8 src)
 {
-    REG_BYTE_U[dst] = REG_DWORD_U[src];
+    MEM_BYTE_U[addr] = REG_BYTE_U[src];
 }
 
-static void mov_gpr8_xmm(enum r8 dst, enum r64 src)
+static void mov_gpr8_m8(enum r8 dst, u32 addr)
 {
-    REG_BYTE_U[dst] = REG_QWORD_U[src];
+    REG_BYTE_U[dst] = MEM_BYTE_U[addr];
 }
 
 static void mov_gpr16_imm16(enum r16 reg, u16 imm16)
@@ -129,24 +129,24 @@ static void mov_gpr16_imm16(enum r16 reg, u16 imm16)
     REG_WORD_U[reg] = imm16;
 }
 
-static void mov_gpr16_gpr8(enum r16 dst, enum r8 src)
-{
-    REG_WORD_U[dst] = REG_BYTE_U[src];
-}
-
 static void mov_gpr16(enum r16 dst, enum r16 src)
 {
     REG_WORD_U[dst] = REG_WORD_U[src];
 }
 
-static void mov_gpr16_gpr32(enum r16 dst, enum r32 src)
+static void mov_m16_imm16(u32 addr, u16 imm16)
 {
-    REG_WORD_U[dst] = REG_DWORD_U[src];
+    *(u16*)&MEM_BYTE_U[addr] = imm16;
 }
 
-static void mov_gpr16_xmm(enum r16 dst, enum r64 src)
+static void mov_m16_gpr16(u32 addr, enum r16 src)
 {
-    REG_WORD_U[dst] = REG_QWORD_U[src];
+    *(u16*)&MEM_BYTE_U[addr] = REG_WORD_U[src];
+}
+
+static void mov_gpr16_m16(enum r16 dst, u32 addr)
+{
+    REG_WORD_U[dst] = *(u16*)&MEM_BYTE_U[addr];
 }
 
 static void mov_gpr32_imm32(enum r32 reg, u32 imm32)
@@ -154,24 +154,24 @@ static void mov_gpr32_imm32(enum r32 reg, u32 imm32)
     REG_DWORD_U[reg] = imm32;
 }
 
-static void mov_gpr32_gpr8(enum r32 dst, enum r8 src)
-{
-    REG_DWORD_U[dst] = REG_BYTE_U[src];
-}
-
-static void mov_gpr32_gpr16(enum r32 dst, enum r16 src)
-{
-    REG_DWORD_U[dst] = REG_WORD_U[src];
-}
-
 static void mov_gpr32(enum r32 dst, enum r32 src)
 {
     REG_DWORD_U[dst] = REG_DWORD_U[src];
 }
 
-static void mov_gpr32_xmm(enum r32 dst, enum r64 src)
+static void mov_m32_imm32(u32 addr, u32 imm32)
 {
-    REG_DWORD_U[dst] = REG_QWORD_U[src];
+    *(u32*)&MEM_BYTE_U[addr] = imm32;
+}
+
+static void mov_m32_gpr32(u32 addr, enum r32 src)
+{
+    *(u32*)&MEM_BYTE_U[addr] = REG_DWORD_U[src];
+}
+
+static void mov_gpr32_m32(enum r32 dst, u32 addr)
+{
+    REG_DWORD_U[dst] = *(u32*)&MEM_BYTE_U[addr];
 }
 
 static void mov_xmm_imm64(enum r64 reg, u64 imm64)
@@ -179,24 +179,24 @@ static void mov_xmm_imm64(enum r64 reg, u64 imm64)
     REG_QWORD_U[reg] = imm64;
 }
 
-static void mov_xmm_gpr8(enum r64 dst, enum r8 src)
-{
-    REG_QWORD_U[dst] = REG_BYTE_U[src];
-}
-
-static void mov_xmm_gpr16(enum r64 dst, enum r16 src)
-{
-    REG_QWORD_U[dst] = REG_WORD_U[src];
-}
-
-static void mov_xmm_gpr32(enum r64 dst, enum r32 src)
-{
-    REG_QWORD_U[dst] = REG_DWORD_U[src];
-}
-
 static void mov_xmm(enum r64 dst, enum r64 src)
 {
     REG_QWORD_U[dst] = REG_QWORD_U[src];
+}
+
+static void mov_m64_imm64(u32 addr, u64 imm64)
+{
+    *(u64*)&MEM_BYTE_U[addr] = imm64;
+}
+
+static void mov_m64_xmm(u32 addr, enum r64 src)
+{
+    *(u64*)&MEM_BYTE_U[addr] = REG_QWORD_U[src];
+}
+
+static void mov_xmm_m64(enum r64 dst, u32 addr)
+{
+    REG_QWORD_U[dst] = *(u64*)&MEM_BYTE_U[addr];
 }
 
 static void interupt(i8 icode)
@@ -213,8 +213,9 @@ void exec()
     int operand_size;
     int tmp, r0, r1;
     u8  imm8, op;
-    u16 imm16 /* , offs */;
-    u32 imm32 /* , addr */;
+    i16 offs;
+    u16 imm16;
+    u32 imm32, addr;
     u64 imm64;
 
 next:
@@ -258,101 +259,145 @@ next:
         case BYTE:
             tmp = fetch_u8();
             r1 = decode_operand(tmp);
-            switch (operand_size = decode_operand_size(tmp)) {
-            case BYTE:
-                mov_gpr8(r0, r1);
-                goto next;
-
-            case WORD:
-                mov_gpr8_gpr16(r0, r1);
-                goto next;
-
-            case DWORD:
-                mov_gpr8_gpr32(r0, r1);
-                goto next;
-
-            case QWORD:
-                mov_gpr8_xmm(r0, r1);
-                goto next;
-
-            default:
-                exceptionf("invalid src operand size in MOV instruction: %d", operand_size);
-            }
+            mov_gpr8(r0, r1);
+            goto next;
 
         case WORD:
             tmp = fetch_u8();
             r1 = decode_operand(tmp);
-            switch (operand_size = decode_operand_size(tmp)) {
-            case BYTE:
-                mov_gpr16_gpr8(r0, r1);
-                goto next;
-
-            case WORD:
-                mov_gpr16(r0, r1);
-                goto next;
-
-            case DWORD:
-                mov_gpr16_gpr32(r0, r1);
-                goto next;
-
-            case QWORD:
-                mov_gpr16_xmm(r0, r1);
-                goto next;
-
-            default:
-                exceptionf("invalid src operand size in MOV instruction: %d", operand_size);
-            }
+            mov_gpr16(r0, r1);
+            goto next;
 
         case DWORD:
             tmp = fetch_u8();
             r1 = decode_operand(tmp);
-            switch (operand_size = decode_operand_size(tmp)) {
-            case BYTE:
-                mov_gpr32_gpr8(r0, r1);
-                goto next;
-
-            case WORD:
-                mov_gpr32_gpr16(r0, r1);
-                goto next;
-
-            case DWORD:
-                mov_gpr32(r0, r1);
-                goto next;
-
-            case QWORD:
-                mov_gpr32_xmm(r0, r1);
-                goto next;
-
-            default:
-                exceptionf("invalid src operand size in MOV instruction: %d", operand_size);
-            }
+            mov_gpr32(r0, r1);
+            goto next;
 
         case QWORD:
             tmp = fetch_u8();
             r1 = decode_operand(tmp);
-            switch (operand_size = decode_operand_size(tmp)) {
-            case BYTE:
-                mov_xmm_gpr8(r0, r1);
-                goto next;
-
-            case WORD:
-                mov_xmm_gpr16(r0, r1);
-                goto next;
-
-            case DWORD:
-                mov_xmm_gpr32(r0, r1);
-                goto next;
-
-            case QWORD:
-                mov_xmm(r0, r1);
-                goto next;
-
-            default:
-                exceptionf("invalid src operand size in MOV instruction: %d", operand_size);
-            }
+            mov_xmm(r0, r1);
+            goto next;
 
         default:
             exceptionf("invalid dest operand size in MOV instruction: %d", operand_size);
+        }
+
+    case MOV_RM:
+        tmp = fetch_u8();
+        r0 = decode_operand(tmp);
+        switch (operand_size = decode_operand_size(tmp)) {
+        case BYTE:
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r1] + sizeof(u8) * offs;
+            mov_gpr8_m8(r0, addr);
+            goto next;
+
+        case WORD:
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r1] + sizeof(u16) * offs;
+            mov_gpr16_m16(r0, addr);
+            goto next;
+
+        case DWORD:
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r1] + sizeof(u32) * offs;
+            mov_gpr32_m32(r0, addr);
+            goto next;
+
+        case QWORD:
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r1] + sizeof(u64) * offs;
+            mov_xmm_m64(r0, addr);
+            goto next;
+
+        default:
+            exceptionf("invalid dest operand size in MOV instruction: %d", operand_size);
+        }
+
+    case MOV_MI:
+        tmp = fetch_u8();
+        r0 = decode_operand(tmp);
+        switch (operand_size = decode_operand_size(tmp)) {
+        case BYTE:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u8) * offs;
+            imm8 = fetch_u8();
+            mov_m8_imm8(addr, imm8);
+            goto next;
+
+        case WORD:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u16) * offs;
+            imm16 = fetch_u16();
+            mov_m16_imm16(addr, r0);
+            goto next;
+
+        case DWORD:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u32) * offs;
+            imm32 = fetch_u32();
+            mov_m32_imm32(addr, imm32);
+            goto next;
+
+        case QWORD:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u64) * offs;
+            imm64 = fetch_u64();
+            mov_m64_imm64(addr, imm64);
+            goto next;
+
+        default:
+            exceptionf("invalid immediate operand size in MOV instruction: %d", operand_size);
+        }
+
+    case MOV_MR:
+        tmp = fetch_u8();
+        r0 = decode_operand(tmp);
+        switch (operand_size = decode_operand_size(tmp)) {
+        case BYTE:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u8) * offs;
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            mov_m8_gpr8(addr, r1);
+            goto next;
+
+        case WORD:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u16) * offs;
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            mov_m16_gpr16(addr, r1);
+            goto next;
+
+        case DWORD:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u32) * offs;
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            mov_m32_gpr32(addr, r1);
+            goto next;
+
+        case QWORD:
+            offs = (i16)fetch_u16();
+            addr = REG_DWORD_U[r0] + sizeof(u64) * offs;
+            tmp = fetch_u8();
+            r1 = decode_operand(tmp);
+            mov_m64_xmm(addr, r1);
+            goto next;
+
+        default:
+            exceptionf("invalid immediate operand size in MOV instruction: %d", operand_size);
         }
 
     case NOP:
