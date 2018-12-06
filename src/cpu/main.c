@@ -24,6 +24,13 @@ void print_regs()
     }
 }
 
+void print_stack()
+{
+    for (int i = 0; i < 32; i += sizeof(u32)) {
+        printf("%08x\n", *(u32*)&cpu.data[cpu.gpr[ESP] + i]);
+    }
+}
+
 int main(void)
 {
     u8* ip = cpu.data;
@@ -55,6 +62,14 @@ int main(void)
     *ip++ = 0x01;
     *ip++ = 0x00;
     // mov %ax, [%esi + 1]
+
+    *ip++ = PUSH;
+    *ip++ = encode_r32(EAX);
+    // push %eax
+
+    *ip++ = POP;
+    *ip++ = encode_r32(ECX);
+    // pop %ecx
 
     *ip++ = HALT;
 

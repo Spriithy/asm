@@ -101,6 +101,9 @@ enum opcode {
     //
     MOV_MR,
 
+    PUSH,
+    POP,
+
     CMP_RI,
     CMP_RR,
     CMP_RM,

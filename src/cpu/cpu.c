@@ -52,6 +52,7 @@ static u32* eax = &REG_DWORD_U[EAX];
 static u64* xmm0 = &REG_QWORD_U[XMM0];
 */
 static u32* eip = &REG_DWORD_U[EIP];
+static u32* esp = &REG_DWORD_U[ESP];
 
 u32 bits(u32 data, u32 start, u32 len)
 {
@@ -209,6 +210,7 @@ void exec()
     (void)interupt;
 
     *eip = 0x00;
+    REG_DWORD_U[ESP] = MEMORY_SIZE - 4;
 
     int operand_size;
     int tmp, r0, r1;
@@ -247,9 +249,6 @@ next:
             r0 = decode_operand(tmp);
             mov_xmm_imm64(r0, imm64);
             goto next;
-
-        default:
-            exceptionf("invalid dest operand size in MOV instruction: %d", operand_size);
         }
 
     case MOV_RR:
@@ -279,9 +278,6 @@ next:
             r1 = decode_operand(tmp);
             mov_xmm(r0, r1);
             goto next;
-
-        default:
-            exceptionf("invalid dest operand size in MOV instruction: %d", operand_size);
         }
 
     case MOV_RM:
@@ -319,9 +315,6 @@ next:
             addr = REG_DWORD_U[r1] + sizeof(u64) * offs;
             mov_xmm_m64(r0, addr);
             goto next;
-
-        default:
-            exceptionf("invalid dest operand size in MOV instruction: %d", operand_size);
         }
 
     case MOV_MI:
@@ -355,9 +348,6 @@ next:
             imm64 = fetch_u64();
             mov_m64_imm64(addr, imm64);
             goto next;
-
-        default:
-            exceptionf("invalid immediate operand size in MOV instruction: %d", operand_size);
         }
 
     case MOV_MR:
@@ -395,10 +385,63 @@ next:
             r1 = decode_operand(tmp);
             mov_m64_xmm(addr, r1);
             goto next;
-
-        default:
-            exceptionf("invalid immediate operand size in MOV instruction: %d", operand_size);
         }
+
+    case PUSH:
+        tmp = fetch_u8();
+        r0 = decode_operand(tmp);
+        switch (operand_size = decode_operand_size(tmp)) {
+        case BYTE:
+            imm32 = REG_BYTE_U[r0];
+            *(u32*)&MEM_BYTE_U[*esp] = imm32;
+            *esp -= sizeof(u32);
+            goto next;
+
+        case WORD:
+            imm32 = REG_WORD_U[r0];
+            *(u32*)&MEM_BYTE_U[*esp] = imm32;
+            *esp -= sizeof(u32);
+            goto next;
+
+        case DWORD:
+            imm32 = REG_DWORD_U[r0];
+            *(u32*)&MEM_BYTE_U[*esp] = imm32;
+            *esp -= sizeof(u32);
+            goto next;
+
+        case QWORD:
+            imm64 = REG_QWORD_U[r0];
+            *(u64*)&MEM_BYTE_U[*esp] = imm64;
+            *esp -= sizeof(u64);
+            goto next;
+        }
+        goto next;
+
+    case POP:
+        tmp = fetch_u8();
+        r0 = decode_operand(tmp);
+        switch (operand_size = decode_operand_size(tmp)) {
+        case BYTE:
+            *esp += sizeof(u32);
+            REG_BYTE_U[r0] = *(u8*)&MEM_BYTE_U[*esp];
+            goto next;
+
+        case WORD:
+            *esp += sizeof(u32);
+            REG_WORD_U[r0] = *(u16*)&MEM_BYTE_U[*esp];
+            goto next;
+
+        case DWORD:
+            *esp += sizeof(u32);
+            REG_DWORD_U[r0] = *(u32*)&MEM_BYTE_U[*esp];
+            goto next;
+
+        case QWORD:
+            *esp += sizeof(u64);
+            REG_QWORD_U[r0] = *(u64*)&MEM_BYTE_U[*esp];
+            goto next;
+        }
+        goto next;
 
     case NOP:
         goto next;

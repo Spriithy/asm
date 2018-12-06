@@ -6,11 +6,10 @@
 #include <string.h>
 
 #define TEXT_SIZE (1 << 16)
-#define MEMORY_SIZE ((1 << 31) - 1)
+#define MEMORY_SIZE (u32)((u64)(1 << 31) - 1)
 
 struct cpu {
     int trap;
-    u8* rosector;
     u8  data[MEMORY_SIZE];
     u32 gpr[16];
     u64 xmm[8];

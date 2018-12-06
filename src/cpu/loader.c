@@ -37,7 +37,6 @@ int load(char* path)
         fclose(file);
         return -1;
     }
-    cpu.rosector = &cpu.data[text_len];
 
     size_t total_len;
     if (fread(&total_len, sizeof(text_len), 1, file) != 1) {
